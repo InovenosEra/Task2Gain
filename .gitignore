@@ -1,0 +1,27 @@
+# Claude Code local settings
+.claude/
+
+# Flutter build artifacts (generated)
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# macOS
+.DS_Store
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Firebase generated config (will be added by flutterfire configure)
+# Keep these tracked once present, but ignore CLI artifacts
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
