@@ -8,7 +8,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Task2Pay'), findsOneWidget);
-    expect(find.text('המשפחה. המשימה. הפרס.'), findsOneWidget);
+    expect(find.text('משפחה. משימות. פרסים.'), findsOneWidget);
     expect(find.text('יאללה, מתחילים!'), findsOneWidget);
   });
 }

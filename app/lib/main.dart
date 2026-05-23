@@ -98,7 +98,7 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'המשפחה. המשימה. הפרס.',
+                    'משפחה. משימות. פרסים.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.heebo(
                       fontSize: 18,
@@ -109,7 +109,7 @@ class WelcomeScreen extends StatelessWidget {
                   const SizedBox(height: 32),
                   const _FeatureChip(
                       emoji: '⚡',
-                      text: 'קווסטים יומיים שמכניסים נקודות'),
+                      text: 'משימות יומיות שהופכות לנקודות'),
                   const SizedBox(height: 10),
                   const _FeatureChip(
                       emoji: '💰',
