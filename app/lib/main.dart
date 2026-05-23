@@ -60,11 +60,11 @@ class WelcomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
                   Center(
                     child: Container(
-                      width: 140,
-                      height: 140,
+                      width: 120,
+                      height: 120,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
@@ -81,16 +81,16 @@ class WelcomeScreen extends StatelessWidget {
                         ],
                       ),
                       child: const Center(
-                        child: Text('🎮', style: TextStyle(fontSize: 72)),
+                        child: Text('🎮', style: TextStyle(fontSize: 60)),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   Text(
                     'Task2Pay',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.heebo(
-                      fontSize: 48,
+                      fontSize: 44,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
                       letterSpacing: -1,
@@ -106,15 +106,15 @@ class WelcomeScreen extends StatelessWidget {
                       color: Colors.white70,
                     ),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 32),
                   const _FeatureChip(
                       emoji: '⚡',
                       text: 'קווסטים יומיים שמכניסים נקודות'),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   const _FeatureChip(
                       emoji: '💰',
                       text: 'ארנק אמיתי — נקודות שהופכות לכסף'),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   const _FeatureChip(
                       emoji: '🏆',
                       text: 'רמות, רצפים, ולוח מובילים משפחתי'),
@@ -124,7 +124,7 @@ class WelcomeScreen extends StatelessWidget {
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFFFFD166),
                       foregroundColor: const Color(0xFF0F1030),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -149,7 +149,7 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
