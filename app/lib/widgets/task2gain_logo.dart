@@ -5,7 +5,10 @@ const _gold = Color(0xFFFFD166);
 const _pink = Color(0xFFEF476F);
 const _violet = Color(0xFF7B2CBF);
 
-/// Vector logo for Task2Gain. Scales perfectly at any size.
+/// Vector logo for Task2Gain — an "achievement emblem": the wordmark
+/// TASK · 2 · GAIN reads as one stamped badge, the words engraved between
+/// hairline rules and evenly spaced around the hero numeral. Scales crisply
+/// at any size.
 class Task2GainLogo extends StatelessWidget {
   const Task2GainLogo({super.key, this.size = 120});
   final double size;
@@ -21,6 +24,15 @@ class Task2GainLogo extends StatelessWidget {
 }
 
 class _LogoPainter extends CustomPainter {
+  // Vertical centres (as fractions of height) — symmetric around 0.5 so the
+  // three elements are evenly spaced.
+  static const double _yTask = 0.205;
+  static const double _yTwo = 0.5;
+  static const double _yGain = 0.795;
+
+  // Heebo cap-height ≈ 0.70 of font size; used to centre glyphs visually.
+  static const double _capRatio = 0.70;
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
@@ -31,6 +43,7 @@ class _LogoPainter extends CustomPainter {
       Radius.circular(radius),
     );
 
+    // Soft drop shadow.
     canvas.drawRRect(
       rect.shift(Offset(0, h * 0.04)),
       Paint()
@@ -38,6 +51,7 @@ class _LogoPainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
     );
 
+    // Gradient body.
     final bodyPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
@@ -47,75 +61,130 @@ class _LogoPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, w, h));
     canvas.drawRRect(rect, bodyPaint);
 
+    // Glossy sheen across the top.
     final sheenPath = Path()
-      ..moveTo(w * 0.12, h * 0.18)
-      ..quadraticBezierTo(w * 0.5, h * 0.0, w * 0.85, h * 0.12)
-      ..quadraticBezierTo(w * 0.5, h * 0.32, w * 0.12, h * 0.5)
+      ..moveTo(w * 0.12, h * 0.20)
+      ..quadraticBezierTo(w * 0.5, h * 0.0, w * 0.88, h * 0.16)
+      ..quadraticBezierTo(w * 0.5, h * 0.34, w * 0.12, h * 0.50)
       ..close();
     canvas.drawPath(
       sheenPath,
-      Paint()..color = Colors.white.withValues(alpha: 0.18),
+      Paint()..color = Colors.white.withValues(alpha: 0.13),
     );
 
-    canvas.drawCircle(
-      Offset(w * 0.5, h * 0.55),
-      w * 0.34,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.12)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.015,
+    // Hero numeral.
+    _paintGlyph(
+      canvas,
+      text: '2',
+      fontSize: w * 0.60,
+      weight: FontWeight.w900,
+      cx: w * 0.5,
+      yc: h * _yTwo,
+      letterSpacing: 0,
+      shadow: true,
     );
+
+    // Engraved wordmark, framed by hairline rules.
+    _paintFramedLabel(canvas, size, 'TASK', yc: h * _yTask);
+    _paintFramedLabel(canvas, size, 'GAIN', yc: h * _yGain);
+  }
+
+  /// Paints [text] horizontally centred on [cx] with its glyph visually
+  /// centred on [yc].
+  void _paintGlyph(
+    Canvas canvas, {
+    required String text,
+    required double fontSize,
+    required FontWeight weight,
+    required double cx,
+    required double yc,
+    required double letterSpacing,
+    bool shadow = false,
+  }) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: GoogleFonts.heebo(
+          fontSize: fontSize,
+          fontWeight: weight,
+          color: Colors.white,
+          letterSpacing: letterSpacing,
+          height: 1.0,
+          shadows: shadow
+              ? [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: 0.26),
+                    blurRadius: fontSize * 0.06,
+                    offset: Offset(0, fontSize * 0.03),
+                  ),
+                ]
+              : null,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final baseline = tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+    final capHeight = fontSize * _capRatio;
+    final dy = yc - (baseline - capHeight / 2);
+    // Subtract the trailing letter-spacing so the text optically centres.
+    final dx = cx - (tp.width - letterSpacing) / 2;
+    tp.paint(canvas, Offset(dx, dy));
+  }
+
+  void _paintFramedLabel(
+    Canvas canvas,
+    Size size,
+    String text, {
+    required double yc,
+  }) {
+    final w = size.width;
+    final fontSize = w * 0.105;
+    final letterSpacing = w * 0.022;
 
     final tp = TextPainter(
       text: TextSpan(
-        text: '2',
+        text: text,
         style: GoogleFonts.heebo(
-          fontSize: w * 0.78,
-          fontWeight: FontWeight.w900,
-          color: Colors.white,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w800,
+          color: Colors.white.withValues(alpha: 0.96),
+          letterSpacing: letterSpacing,
           height: 1.0,
           shadows: [
             Shadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: w * 0.04,
-              offset: Offset(0, w * 0.02),
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: w * 0.025,
+              offset: Offset(0, w * 0.008),
             ),
           ],
         ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    final textOffset = Offset(
-      (w - tp.width) / 2,
-      h * 0.55 - tp.height / 2,
-    );
-    tp.paint(canvas, textOffset);
 
-    _drawSparkle(canvas, Offset(w * 0.82, h * 0.18), w * 0.08, Colors.white);
-    _drawSparkle(
-      canvas,
-      Offset(w * 0.16, h * 0.82),
-      w * 0.05,
-      Colors.white.withValues(alpha: 0.7),
-    );
-  }
+    final textWidth = tp.width - letterSpacing;
+    final baseline = tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+    final capHeight = fontSize * _capRatio;
+    final dy = yc - (baseline - capHeight / 2);
+    final dx = w * 0.5 - textWidth / 2;
+    tp.paint(canvas, Offset(dx, dy));
 
-  void _drawSparkle(Canvas canvas, Offset center, double size, Color color) {
-    final path = Path();
-    final cx = center.dx;
-    final cy = center.dy;
-    final long = size;
-    final short = size * 0.25;
-    path.moveTo(cx, cy - long);
-    path.quadraticBezierTo(cx + short, cy - short, cx + long, cy);
-    path.quadraticBezierTo(cx + short, cy + short, cx, cy + long);
-    path.quadraticBezierTo(cx - short, cy + short, cx - long, cy);
-    path.quadraticBezierTo(cx - short, cy - short, cx, cy - long);
-    path.close();
-    canvas.drawPath(path, Paint()..color = color);
+    // Flanking hairline rules, centred on the glyph centre line.
+    final rulePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.7)
+      ..strokeWidth = w * 0.012
+      ..strokeCap = StrokeCap.round;
+    final ruleLen = w * 0.11;
+    final gap = w * 0.05;
+    final leftEnd = dx - gap;
+    canvas.drawLine(
+        Offset(leftEnd - ruleLen, yc), Offset(leftEnd, yc), rulePaint);
+    final rightStart = dx + textWidth + gap;
+    canvas.drawLine(
+        Offset(rightStart, yc), Offset(rightStart + ruleLen, yc), rulePaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
