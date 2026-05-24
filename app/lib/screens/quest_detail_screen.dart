@@ -74,14 +74,20 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
       _error = null;
     });
     try {
+      final q = widget.quest;
+      if (q.approvalMode == QuestApprovalMode.auto && !_needsPhoto) {
+        await _service.completeAuto(quest: q, kidUid: widget.kidUid);
+        if (!mounted) return;
+        _showCelebration(instant: true);
+        return;
+      }
       final id = _instanceId ??
-          await _service.startQuest(
-              quest: widget.quest, kidUid: widget.kidUid);
+          await _service.startQuest(quest: q, kidUid: widget.kidUid);
       _instanceId = id;
       List<String>? urls;
       if (_proofFile != null) {
         final url = await _uploader.uploadProof(
-          familyId: widget.quest.familyId,
+          familyId: q.familyId,
           instanceId: id,
           name: 'proof_${DateTime.now().millisecondsSinceEpoch}',
           file: _proofFile!,
@@ -90,7 +96,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
       }
       await _service.submit(id, proofPhotos: urls);
       if (!mounted) return;
-      _showCelebration();
+      _showCelebration(instant: false);
     } catch (e) {
       setState(() => _error = 'שגיאה: $e');
     } finally {
@@ -98,7 +104,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     }
   }
 
-  void _showCelebration() {
+  void _showCelebration({required bool instant}) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -131,7 +137,9 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'נשלח להורה לאישור.\nכשתאושר תקבל +${widget.quest.points}⭐ ו-${widget.quest.xpReward} XP',
+                instant
+                    ? 'קיבלת +${widget.quest.points}⭐ עכשיו! 🎉'
+                    : 'נשלח להורה לאישור.\nכשתאושר תקבל +${widget.quest.points}⭐',
                 textAlign: TextAlign.center,
                 style: bodyFont(size: 14, height: 1.6),
               ),
@@ -240,8 +248,6 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                     children: [
                       _chip('${q.points}', '⭐', 'נקודות',
                           AppPalette.gold),
-                      _chip('${q.xpReward}', '🔥', 'XP',
-                          AppPalette.violet),
                       _chip(q.difficulty.label, '💪', 'קושי',
                           _grad.first),
                       _chip(q.recurrence.label, '🔁', 'תדירות',
