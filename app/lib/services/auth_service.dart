@@ -39,6 +39,7 @@ class AuthService {
         'minPointsToConvert': 100,
         'pointToShekelRate': 0.01,
         'leaderboardIncludesAdmins': false,
+        'dailyGoalDefault': 50,
       },
     });
     batch.set(userRef, {
@@ -46,9 +47,7 @@ class AuthService {
       'role': 'admin',
       'displayName': parentDisplayName,
       'avatar': {'type': 'preset', 'value': avatar},
-      'level': 1,
-      'xp': 0,
-      'xpToNextLevel': 100,
+      'dailyGoal': 50,
       'streak': {'current': 0, 'longest': 0, 'lastDate': null},
       'badges': <Map<String, dynamic>>[],
       'createdAt': FieldValue.serverTimestamp(),
@@ -58,6 +57,8 @@ class AuthService {
       'familyId': familyRef.id,
       'points': 0,
       'moneyILS': 0,
+      'tokens': 0,
+      'cosmeticsOwned': <String>[],
       'lifetimeEarned': {'points': 0, 'money': 0},
     });
     await batch.commit();
@@ -98,9 +99,7 @@ class AuthService {
       'role': role,
       'displayName': displayName,
       'avatar': {'type': 'preset', 'value': avatar},
-      'level': 1,
-      'xp': 0,
-      'xpToNextLevel': 100,
+      'dailyGoal': 50,
       'streak': {'current': 0, 'longest': 0, 'lastDate': null},
       'badges': <Map<String, dynamic>>[],
       'createdAt': FieldValue.serverTimestamp(),
@@ -110,6 +109,8 @@ class AuthService {
       'familyId': familyId,
       'points': 0,
       'moneyILS': 0,
+      'tokens': 0,
+      'cosmeticsOwned': <String>[],
       'lifetimeEarned': {'points': 0, 'money': 0},
     });
     batch.update(inviteRef, {
