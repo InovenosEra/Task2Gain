@@ -115,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
                         'משפחה. משימות. פרסים.',
                         textAlign: TextAlign.center,
                         style: bodyFont(
-                          size: 16,
+                          size: 19,
                           weight: FontWeight.w700,
                         ),
                         colors: AppPalette.heroGrad,
