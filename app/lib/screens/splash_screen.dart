@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
-import '../widgets/gradient_text.dart';
 import '../widgets/screen_background.dart';
 import '../widgets/task2gain_logo.dart';
 import 'main_navigation.dart';
@@ -108,16 +107,6 @@ class _SplashScreenState extends State<SplashScreen>
                       ],
                     ),
                     const SizedBox(height: 28),
-                    GradientText(
-                      'Task2Gain',
-                      style: displayFont(
-                        size: 46,
-                        weight: FontWeight.w900,
-                        letterSpacing: -1,
-                      ),
-                      colors: AppPalette.heroGrad,
-                    ),
-                    const SizedBox(height: 6),
                     Text(
                       'משפחה. משימות. פרסים.',
                       style: bodyFont(
