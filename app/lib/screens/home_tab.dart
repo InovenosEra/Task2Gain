@@ -23,22 +23,12 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('[HomeTab] build uid=${data.uid} role=${data.role}');
     final firestore = FirebaseFirestore.instance;
     final questService = QuestService();
     return ListView(
         physics: const BouncingScrollPhysics(),
         padding: EdgeInsets.zero,
         children: [
-          Container(
-            height: 80,
-            color: Colors.red,
-            alignment: Alignment.center,
-            child: Text(
-              'DEBUG: HomeTab render OK · uid=${data.uid.substring(0, 6)}',
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
           _Header(data: data),
           const SizedBox(height: 4),
           Padding(
@@ -452,26 +442,29 @@ class _XpBar extends StatelessWidget {
   final double progress;
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: Stack(
-        children: [
-          Container(
-            height: 12,
-            color: Colors.white.withValues(alpha: 0.08),
-          ),
-          AnimatedFractionallySizedBox(
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOutCubic,
-            widthFactor: progress,
-            heightFactor: 1.0,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: AppPalette.heroGrad),
+    return SizedBox(
+      height: 12,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+            AnimatedFractionallySizedBox(
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOutCubic,
+              widthFactor: progress,
+              heightFactor: 1.0,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(colors: AppPalette.heroGrad),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
