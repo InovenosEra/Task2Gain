@@ -27,12 +27,12 @@ void main() {
       if (finder.evaluate().isNotEmpty) {
         // Let the frame visually settle for the screenshot loop.
         await tester.pump(const Duration(milliseconds: 600));
-        debugPrint('STEP_OK: ${label ?? finder.description}');
+        debugPrint('STEP_OK: ${label ?? finder.toString()}');
         return;
       }
     }
-    debugPrint('STEP_FAIL: ${label ?? finder.description}');
-    fail('Timed out waiting for: ${label ?? finder.description}');
+    debugPrint('STEP_FAIL: ${label ?? finder.toString()}');
+    fail('Timed out waiting for: ${label ?? finder.toString()}');
   }
 
   Future<void> tapText(WidgetTester tester, String text) async {
@@ -61,6 +61,13 @@ void main() {
     // 2. Shop tab.
     await tapText(tester, 'חנות');
     await pumpUntil(tester, find.text('חנות פרסים 🎁'), label: 'shop tab');
+
+    // 2b. Prize Machine tab.
+    await tapText(tester, 'פרסים');
+    await pumpUntil(tester, find.text('מכונת הפרסים 🎰'),
+        label: 'prize machine tab');
+    await pumpUntil(tester, find.text('כרטיס גירוד'),
+        label: 'prize machine: scratch section');
 
     // 3. Family / leaderboard tab.
     await tapText(tester, 'משפחה');
