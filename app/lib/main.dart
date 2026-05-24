@@ -18,7 +18,7 @@ class Task2GainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Task2Gain',
+      title: 'Task2Play',
       debugShowCheckedModeBanner: false,
       locale: const Locale('he'),
       supportedLocales: const [Locale('he'), Locale('en')],

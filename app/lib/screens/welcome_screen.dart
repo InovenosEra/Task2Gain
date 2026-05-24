@@ -65,7 +65,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     interval: const Interval(0.0, 0.6,
                         curve: Curves.easeOutCubic),
                     child: GradientText(
-                      'Task2Gain',
+                      'Task2Play',
                       style: displayFont(
                         size: 48,
                         weight: FontWeight.w900,
