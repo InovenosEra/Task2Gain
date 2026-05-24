@@ -110,7 +110,7 @@ class _SplashScreenState extends State<SplashScreen>
                     // Pull the tagline up into the logo's glow so it reads as
                     // part of the mark, and paint it in the logo gradient.
                     Transform.translate(
-                      offset: const Offset(0, -32),
+                      offset: const Offset(0, -24),
                       child: GradientText(
                         'משפחה. משימות. פרסים.',
                         textAlign: TextAlign.center,
