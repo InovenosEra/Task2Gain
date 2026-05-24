@@ -93,7 +93,7 @@ void main() {
         label: 'back to admin from rewards');
 
     // 8. Home → quest detail renders, then back.
-    await tapText(tester, 'בית');
+    await tapText(tester, 'משימות');
     await pumpUntil(tester, find.text('משימות פתוחות'), label: 'back home');
     await tapText(tester, 'להוריד זבל');
     await pumpUntil(tester, find.text('קושי'), label: 'quest detail');

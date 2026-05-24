@@ -128,9 +128,9 @@ class _TabHost extends StatelessWidget {
 
   List<_TabSpec> get _tabs => [
         _TabSpec(
-          icon: Icons.home_outlined,
-          activeIcon: Icons.home_rounded,
-          label: 'בית',
+          icon: Icons.assignment_outlined,
+          activeIcon: Icons.assignment_rounded,
+          label: 'משימות',
           builder: (ctx) => HomeTab(data: data),
         ),
         _TabSpec(
