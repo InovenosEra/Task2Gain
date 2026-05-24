@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/badge.dart';
 import '../models/quest.dart';
 import '../models/quest_instance.dart';
+import 'daily_goal.dart';
 
 class QuestInstanceService {
   QuestInstanceService({FirebaseFirestore? firestore})
@@ -26,7 +27,6 @@ class QuestInstanceService {
       'title': quest.title,
       'icon': quest.icon,
       'points': quest.points,
-      'xpReward': quest.xpReward,
       'startedAt': FieldValue.serverTimestamp(),
     });
     return ref.id;
@@ -41,9 +41,38 @@ class QuestInstanceService {
     });
   }
 
-  /// Approves a submission and credits points + XP. Runs as a Firestore
-  /// transaction so the wallet/user increments and the instance status flip
-  /// happen atomically.
+  /// Auto-approved (honor-system) completion: creates an instance already
+  /// approved and credits the reward in one transaction. No parent step.
+  Future<String> completeAuto({
+    required Quest quest,
+    required String kidUid,
+  }) async {
+    final ref = _coll.doc();
+    await _firestore.runTransaction((tx) async {
+      // All reads must precede writes in a Firestore transaction.
+      final earn = await _readEarnState(tx, uid: kidUid);
+      tx.set(ref, {
+        'questId': quest.id,
+        'familyId': quest.familyId,
+        'assignedTo': kidUid,
+        'status': QuestInstanceStatus.approved.serialized,
+        'title': quest.title,
+        'icon': quest.icon,
+        'points': quest.points,
+        'startedAt': FieldValue.serverTimestamp(),
+        'approvedAt': FieldValue.serverTimestamp(),
+        'approvedBy': kidUid,
+        'pointsAwarded': quest.points,
+        'comboMultiplier': 1.0,
+      });
+      _writeEarn(tx, uid: kidUid, points: quest.points, earn: earn,
+          instanceRef: ref);
+    });
+    return ref.id;
+  }
+
+  /// Approves a submitted instance and credits points + tokens + streak +
+  /// badges atomically. Writes no xp/level.
   Future<void> approve({
     required String instanceId,
     required String adminUid,
@@ -58,103 +87,15 @@ class QuestInstanceService {
       }
       final assignedTo = data['assignedTo'] as String;
       final points = (data['points'] as num?)?.toInt() ?? 0;
-      final xp = (data['xpReward'] as num?)?.toInt() ?? 0;
-
-      final walletRef = _firestore.collection('wallets').doc(assignedTo);
-      final userRef = _firestore.collection('users').doc(assignedTo);
-      final walletSnap = await tx.get(walletRef);
-      final userSnap = await tx.get(userRef);
-
-      final wallet = walletSnap.data() ?? <String, dynamic>{};
-      final lifetime = (wallet['lifetimeEarned'] as Map?)
-              ?.cast<String, dynamic>() ??
-          <String, dynamic>{'points': 0, 'money': 0};
-      final newLifetimePoints =
-          ((lifetime['points'] as num?)?.toInt() ?? 0) + points;
-
-      tx.set(walletRef, {
-        'points': FieldValue.increment(points),
-        'lifetimeEarned': {
-          'points': newLifetimePoints,
-          'money': (lifetime['money'] as num?)?.toInt() ?? 0,
-        },
-      }, SetOptions(merge: true));
-
-      final user = userSnap.data() ?? <String, dynamic>{};
-      final currentXp = (user['xp'] as num?)?.toInt() ?? 0;
-      final currentLevel = (user['level'] as num?)?.toInt() ?? 1;
-      final xpToNext = (user['xpToNextLevel'] as num?)?.toInt() ?? 100;
-      final newXp = currentXp + xp;
-
-      var levelAfter = currentLevel;
-      var xpAfter = newXp;
-      var xpThreshold = xpToNext;
-      while (xpAfter >= xpThreshold) {
-        xpAfter -= xpThreshold;
-        levelAfter += 1;
-        xpThreshold = (xpThreshold * 1.4).round();
-      }
-
-      final streakMap = (user['streak'] as Map?)?.cast<String, dynamic>() ??
-          <String, dynamic>{};
-      final lastDateStr = streakMap['lastDate'] as String?;
-      final today = _todayUtcKey();
-      final yesterday = _yesterdayUtcKey();
-      var streakCurrent = (streakMap['current'] as num?)?.toInt() ?? 0;
-      var streakLongest = (streakMap['longest'] as num?)?.toInt() ?? 0;
-      if (lastDateStr == today) {
-        // already counted today
-      } else if (lastDateStr == yesterday) {
-        streakCurrent += 1;
-      } else {
-        streakCurrent = 1;
-      }
-      if (streakCurrent > streakLongest) streakLongest = streakCurrent;
-
-      final questsCompleted =
-          ((user['questsCompleted'] as num?)?.toInt() ?? 0) + 1;
-      final existingBadges = (user['badges'] as List?)?.cast<dynamic>() ??
-          const <dynamic>[];
-      final existingBadgeIds = existingBadges
-          .map((b) => (b is Map ? b['id'] as String? : null) ?? '')
-          .toSet();
-      final metrics = BadgeMetrics(
-        level: levelAfter,
-        lifetimePoints: newLifetimePoints,
-        currentStreak: streakCurrent,
-        longestStreak: streakLongest,
-        questsCompleted: questsCompleted,
-      );
-      final newlyUnlocked = badgeCatalog
-          .where((b) =>
-              !existingBadgeIds.contains(b.id) && b.unlocked(metrics))
-          .map((b) => {
-                'id': b.id,
-                'earnedAt': DateTime.now().toUtc().toIso8601String(),
-              })
-          .toList();
-      final updatedBadges = [...existingBadges, ...newlyUnlocked];
-
-      tx.update(userRef, {
-        'xp': xpAfter,
-        'level': levelAfter,
-        'xpToNextLevel': xpThreshold,
-        'streak': {
-          'current': streakCurrent,
-          'longest': streakLongest,
-          'lastDate': today,
-        },
-        'questsCompleted': questsCompleted,
-        'badges': updatedBadges,
-      });
-
+      final earn = await _readEarnState(tx, uid: assignedTo);
       tx.update(instanceRef, {
         'status': QuestInstanceStatus.approved.serialized,
         'approvedBy': adminUid,
         'approvedAt': FieldValue.serverTimestamp(),
         'pointsAwarded': points,
-        'xpAwarded': xp,
       });
+      _writeEarn(tx, uid: assignedTo, points: points, earn: earn,
+          instanceRef: instanceRef);
     });
   }
 
@@ -169,6 +110,120 @@ class QuestInstanceService {
       'approvedAt': FieldValue.serverTimestamp(),
       'rejectionReason': reason,
     });
+  }
+
+  /// Snapshot of everything the earn-credit needs, read before any write.
+  Future<_EarnState> _readEarnState(
+      Transaction tx, {required String uid}) async {
+    final walletRef = _firestore.collection('wallets').doc(uid);
+    final userRef = _firestore.collection('users').doc(uid);
+    final walletSnap = await tx.get(walletRef);
+    final userSnap = await tx.get(userRef);
+    return _EarnState(
+      walletRef: walletRef,
+      userRef: userRef,
+      wallet: walletSnap.data() ?? <String, dynamic>{},
+      user: userSnap.data() ?? <String, dynamic>{},
+    );
+  }
+
+  void _writeEarn(
+    Transaction tx, {
+    required String uid,
+    required int points,
+    required _EarnState earn,
+    required DocumentReference<Map<String, dynamic>> instanceRef,
+  }) {
+    final wallet = earn.wallet;
+    final user = earn.user;
+    final today = _todayUtcKey();
+    final yesterday = _yesterdayUtcKey();
+
+    // Lifetime points.
+    final lifetime =
+        (wallet['lifetimeEarned'] as Map?)?.cast<String, dynamic>() ??
+            <String, dynamic>{'points': 0, 'money': 0};
+    final newLifetimePoints =
+        ((lifetime['points'] as num?)?.toInt() ?? 0) + points;
+
+    // Streak.
+    final streakMap =
+        (user['streak'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final lastDateStr = streakMap['lastDate'] as String?;
+    var streakCurrent = (streakMap['current'] as num?)?.toInt() ?? 0;
+    var streakLongest = (streakMap['longest'] as num?)?.toInt() ?? 0;
+    final streakAlreadyCountedToday = lastDateStr == today;
+    if (streakAlreadyCountedToday) {
+      // no change
+    } else if (lastDateStr == yesterday) {
+      streakCurrent += 1;
+    } else {
+      streakCurrent = 1;
+    }
+    if (streakCurrent > streakLongest) streakLongest = streakCurrent;
+
+    // Today's running earnings (resets when the date rolls over).
+    final earnedMap =
+        (user['earnedToday'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final earnedDate = earnedMap['date'] as String?;
+    final earnedBefore =
+        earnedDate == today ? (earnedMap['points'] as num?)?.toInt() ?? 0 : 0;
+    final goal = (user['dailyGoal'] as num?)?.toInt() ?? 50;
+
+    // Tokens: daily-goal crossing + streak milestone (only on a fresh streak day).
+    var tokensEarned = 0;
+    if (crossedDailyGoal(
+        earnedToday: earnedBefore, justEarned: points, goal: goal)) {
+      tokensEarned += 1;
+    }
+    if (!streakAlreadyCountedToday) {
+      tokensEarned += streakMilestoneTokens(streakCurrent);
+    }
+
+    // Badges.
+    final questsCompleted =
+        ((user['questsCompleted'] as num?)?.toInt() ?? 0) + 1;
+    final existingBadges =
+        (user['badges'] as List?)?.cast<dynamic>() ?? const <dynamic>[];
+    final existingBadgeIds = existingBadges
+        .map((b) => (b is Map ? b['id'] as String? : null) ?? '')
+        .toSet();
+    final metrics = BadgeMetrics(
+      lifetimePoints: newLifetimePoints,
+      currentStreak: streakCurrent,
+      longestStreak: streakLongest,
+      questsCompleted: questsCompleted,
+    );
+    final newlyUnlocked = badgeCatalog
+        .where((b) => !existingBadgeIds.contains(b.id) && b.unlocked(metrics))
+        .map((b) => {
+              'id': b.id,
+              'earnedAt': DateTime.now().toUtc().toIso8601String(),
+            })
+        .toList();
+    final updatedBadges = [...existingBadges, ...newlyUnlocked];
+
+    tx.set(earn.walletRef, {
+      'points': FieldValue.increment(points),
+      'tokens': FieldValue.increment(tokensEarned),
+      'lifetimeEarned': {
+        'points': newLifetimePoints,
+        'money': (lifetime['money'] as num?)?.toInt() ?? 0,
+      },
+    }, SetOptions(merge: true));
+
+    tx.set(earn.userRef, {
+      'streak': {
+        'current': streakCurrent,
+        'longest': streakLongest,
+        'lastDate': today,
+      },
+      'earnedToday': {'date': today, 'points': earnedBefore + points},
+      'questsCompleted': questsCompleted,
+      'badges': updatedBadges,
+    }, SetOptions(merge: true));
+
+    tx.update(instanceRef, {'tokensAwarded': tokensEarned});
   }
 
   static String _todayUtcKey() {
@@ -210,4 +265,17 @@ class QuestInstanceService {
       return list;
     });
   }
+}
+
+class _EarnState {
+  _EarnState({
+    required this.walletRef,
+    required this.userRef,
+    required this.wallet,
+    required this.user,
+  });
+  final DocumentReference<Map<String, dynamic>> walletRef;
+  final DocumentReference<Map<String, dynamic>> userRef;
+  final Map<String, dynamic> wallet;
+  final Map<String, dynamic> user;
 }
