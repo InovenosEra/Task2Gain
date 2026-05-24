@@ -34,6 +34,7 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
   late QuestDifficulty _difficulty;
   late QuestProof _proof;
   late QuestRecurrence _recurrence;
+  late QuestApprovalMode _approvalMode;
   bool _submitting = false;
   String? _error;
 
@@ -51,6 +52,11 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
     _difficulty = e?.difficulty ?? QuestDifficulty.easy;
     _proof = e?.proofRequired ?? QuestProof.none;
     _recurrence = e?.recurrence ?? QuestRecurrence.once;
+    _approvalMode = e?.approvalMode ??
+        ((e?.proofRequired ?? QuestProof.none) != QuestProof.none ||
+                (e?.points ?? 10) >= 100
+            ? QuestApprovalMode.required
+            : QuestApprovalMode.auto);
   }
 
   @override
@@ -84,6 +90,7 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
           difficulty: _difficulty,
           proofRequired: _proof,
           recurrence: _recurrence,
+          approvalMode: _approvalMode,
         );
       } else {
         await _service.createQuest(
@@ -96,6 +103,7 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
           difficulty: _difficulty,
           proofRequired: _proof,
           recurrence: _recurrence,
+          approvalMode: _approvalMode,
         );
       }
       if (!mounted) return;
@@ -174,6 +182,14 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
                 selected: _recurrence,
                 labelOf: (v) => v.label,
                 onSelect: (v) => setState(() => _recurrence = v),
+              ),
+              const SizedBox(height: 14),
+              const FieldLabel('אישור'),
+              _Segmented<QuestApprovalMode>(
+                values: QuestApprovalMode.values,
+                selected: _approvalMode,
+                labelOf: (v) => v.label,
+                onSelect: (v) => setState(() => _approvalMode = v),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 14),

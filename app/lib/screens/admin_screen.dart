@@ -546,7 +546,7 @@ class _AdminQuestCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${quest.points}⭐ · ${quest.xpReward} XP · ${quest.difficulty.label} · ${quest.recurrence.label}',
+                      '${quest.points}⭐ · ${quest.approvalMode.label} · ${quest.recurrence.label}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: bodyFont(

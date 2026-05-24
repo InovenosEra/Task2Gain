@@ -219,7 +219,7 @@ class _QuestApprovalCardState extends State<_QuestApprovalCard> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '+${inst.points}⭐  ·  +${inst.xpReward} XP',
+                      '+${inst.points}⭐',
                       style: bodyFont(
                           size: 12, color: Colors.white70),
                     ),

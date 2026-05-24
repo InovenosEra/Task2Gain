@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/avatar_picker.dart';
-import '../widgets/gradient_text.dart';
 import '../widgets/page_routes.dart';
 import '../widgets/scale_tap.dart';
 import 'badges_screen.dart';
@@ -78,10 +77,6 @@ class ProfileTab extends StatelessWidget {
                 builder: (context, walletSnap) {
                   final user = userSnap.data?.data() ?? const {};
                   final wallet = walletSnap.data?.data() ?? const {};
-                  final level = (user['level'] as num?)?.toInt() ?? 1;
-                  final xp = (user['xp'] as num?)?.toInt() ?? 0;
-                  final xpToNext =
-                      (user['xpToNextLevel'] as num?)?.toInt() ?? 100;
                   final streakMap = (user['streak'] as Map?)
                           ?.cast<String, dynamic>() ??
                       const {};
@@ -99,95 +94,19 @@ class ProfileTab extends StatelessWidget {
                               as Map?)?['points'] as num?)
                           ?.toInt() ??
                       0;
-                  final progress = xpToNext == 0
-                      ? 0.0
-                      : (xp / xpToNext).clamp(0.0, 1.0);
                   return Column(
                     children: [
                       _StatGrid(stats: [
-                        _Stat('⭐', '$points', 'נקודות',
-                            AppPalette.gold),
-                        _Stat('💰', '₪${money.toStringAsFixed(2)}',
-                            'כסף', AppPalette.green),
-                        _Stat('🔥', '$streakDays', 'רצף',
-                            AppPalette.pink),
+                        _Stat('⭐', '$points', 'נקודות', AppPalette.gold),
+                        _Stat('💰', '₪${money.toStringAsFixed(2)}', 'כסף',
+                            AppPalette.green),
+                        _Stat('🔥', '$streakDays', 'רצף', AppPalette.pink),
                         _Stat('🏆', '$questsDone', 'משימות',
                             AppPalette.violet),
                       ]),
                       const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: const LinearGradient(
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                            colors: [
-                              Color(0xFF34206B),
-                              Color(0xFF1A1B3A),
-                              Color(0xFF3F1A55),
-                            ],
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'רמה',
-                                  style: bodyFont(
-                                    size: 12,
-                                    color: Colors.white60,
-                                    letterSpacing: 0.4,
-                                  ),
-                                ),
-                                const Spacer(),
-                                GradientText(
-                                  '$level',
-                                  style: displayFont(
-                                      size: 36,
-                                      weight: FontWeight.w900,
-                                      height: 1.0),
-                                  colors: AppPalette.heroGrad,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: LinearProgressIndicator(
-                                value: progress,
-                                minHeight: 10,
-                                backgroundColor: Colors.white
-                                    .withValues(alpha: 0.08),
-                                valueColor:
-                                    const AlwaysStoppedAnimation(
-                                        AppPalette.gold),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Text(
-                                  'XP $xp / $xpToNext',
-                                  style: bodyFont(
-                                    size: 12,
-                                    color: Colors.white60,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  'רצף שיא: $streakLongest · lifetime ⭐$lifetimePoints',
-                                  style: bodyFont(
-                                    size: 11,
-                                    color: Colors.white54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+                      _LifetimeStrip(
+                          longest: streakLongest, lifetime: lifetimePoints),
                     ],
                   );
                 },
@@ -218,6 +137,31 @@ class ProfileTab extends StatelessWidget {
         ),
         const SizedBox(height: 40),
       ],
+    );
+  }
+}
+
+class _LifetimeStrip extends StatelessWidget {
+  const _LifetimeStrip({required this.longest, required this.lifetime});
+  final int longest;
+  final int lifetime;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('רצף שיא: $longest 🔥',
+              style: bodyFont(size: 12, color: Colors.white70)),
+          Text('סה״כ הרווחת: $lifetime ⭐',
+              style: bodyFont(size: 12, color: Colors.white70)),
+        ],
+      ),
     );
   }
 }

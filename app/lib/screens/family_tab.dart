@@ -5,7 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/avatar_picker.dart';
 import 'main_navigation.dart';
 
-/// Family tab — leaderboard + family overview. Sorted by level then XP, top 3
+/// Family tab — leaderboard + family overview. Sorted by lifetime points, top 3
 /// rendered as a podium, rest as rows.
 class FamilyTab extends StatelessWidget {
   const FamilyTab({super.key, required this.data});
@@ -79,19 +79,13 @@ class FamilyTab extends StatelessWidget {
                     name: (d['displayName'] as String?) ?? '',
                     role: (d['role'] as String?) ?? 'kid',
                     avatar: (avatarMap['value'] as String?) ?? '👤',
-                    level: (d['level'] as num?)?.toInt() ?? 1,
-                    xp: (d['xp'] as num?)?.toInt() ?? 0,
                     lifetimePoints: ((wallet['lifetimeEarned'] as Map?)?[
                                 'points'] as num?)
                             ?.toInt() ??
                         0,
                   );
                 }).toList();
-                entries.sort((a, b) {
-                  final byLevel = b.level.compareTo(a.level);
-                  if (byLevel != 0) return byLevel;
-                  return b.xp.compareTo(a.xp);
-                });
+                entries.sort((a, b) => b.lifetimePoints.compareTo(a.lifetimePoints));
                 return Column(
                   children: [
                     if (entries.length >= 3)
@@ -151,16 +145,12 @@ class _Entry {
     required this.name,
     required this.role,
     required this.avatar,
-    required this.level,
-    required this.xp,
     required this.lifetimePoints,
   });
   final String uid;
   final String name;
   final String role;
   final String avatar;
-  final int level;
-  final int xp;
   final int lifetimePoints;
 }
 
@@ -259,7 +249,7 @@ class _PodiumStep extends StatelessWidget {
           style: displayFont(size: 13, weight: FontWeight.w800),
         ),
         Text(
-          'רמה ${entry.level}',
+          '${entry.lifetimePoints} ⭐',
           style: bodyFont(size: 11, color: Colors.white60),
         ),
         const SizedBox(height: 8),
@@ -410,9 +400,6 @@ class _LeaderRow extends StatelessWidget {
                 Wrap(
                   spacing: 6,
                   children: [
-                    _miniTag('LV ${entry.level}', AppPalette.gold),
-                    _miniTag(
-                        '${entry.xp} XP', AppPalette.violet),
                     _miniTag(
                         '${entry.lifetimePoints} ⭐', AppPalette.green),
                   ],
