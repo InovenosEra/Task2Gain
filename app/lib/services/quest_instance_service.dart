@@ -93,6 +93,7 @@ class QuestInstanceService {
         'approvedBy': adminUid,
         'approvedAt': FieldValue.serverTimestamp(),
         'pointsAwarded': points,
+        'comboMultiplier': 1.0,
       });
       _writeEarn(tx, uid: assignedTo, points: points, earn: earn,
           instanceRef: instanceRef);
@@ -136,8 +137,9 @@ class QuestInstanceService {
   }) {
     final wallet = earn.wallet;
     final user = earn.user;
-    final today = _todayUtcKey();
-    final yesterday = _yesterdayUtcKey();
+    final now = DateTime.now().toUtc();
+    final today = _dayKey(now);
+    final yesterday = _dayKey(now.subtract(const Duration(days: 1)));
 
     // Lifetime points.
     final lifetime =
@@ -198,7 +200,7 @@ class QuestInstanceService {
         .where((b) => !existingBadgeIds.contains(b.id) && b.unlocked(metrics))
         .map((b) => {
               'id': b.id,
-              'earnedAt': DateTime.now().toUtc().toIso8601String(),
+              'earnedAt': now.toIso8601String(),
             })
         .toList();
     final updatedBadges = [...existingBadges, ...newlyUnlocked];
@@ -226,14 +228,9 @@ class QuestInstanceService {
     tx.update(instanceRef, {'tokensAwarded': tokensEarned});
   }
 
-  static String _todayUtcKey() {
-    final now = DateTime.now().toUtc();
-    return '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  }
-
-  static String _yesterdayUtcKey() {
-    final y = DateTime.now().toUtc().subtract(const Duration(days: 1));
-    return '${y.year.toString().padLeft(4, '0')}-${y.month.toString().padLeft(2, '0')}-${y.day.toString().padLeft(2, '0')}';
+  /// UTC date key in `YYYY-MM-DD` form for the given (already-UTC) time.
+  static String _dayKey(DateTime utc) {
+    return '${utc.year.toString().padLeft(4, '0')}-${utc.month.toString().padLeft(2, '0')}-${utc.day.toString().padLeft(2, '0')}';
   }
 
   Stream<List<QuestInstance>> watchMine(String kidUid) {

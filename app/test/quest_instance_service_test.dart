@@ -45,6 +45,86 @@ void main() {
         createdAt: DateTime.now(),
       );
 
+  String dayKey(DateTime d) {
+    final u = d.toUtc();
+    return '${u.year.toString().padLeft(4, '0')}-${u.month.toString().padLeft(2, '0')}-${u.day.toString().padLeft(2, '0')}';
+  }
+
+  final today = dayKey(DateTime.now());
+  final yesterday = dayKey(DateTime.now().subtract(const Duration(days: 1)));
+  final threeDaysAgo =
+      dayKey(DateTime.now().subtract(const Duration(days: 3)));
+
+  test('streak continues from yesterday (4 -> 5)', () async {
+    await db.collection('users').doc('kid1').set({
+      'streak': {'current': 4, 'longest': 4, 'lastDate': yesterday},
+    }, SetOptions(merge: true));
+
+    await service.completeAuto(
+        quest: quest(points: 30, mode: QuestApprovalMode.auto), kidUid: 'kid1');
+
+    final streak = (await db.collection('users').doc('kid1').get())
+        .data()!['streak'] as Map;
+    expect(streak['current'], 5);
+    expect(streak['longest'], 5);
+  });
+
+  test('streak resets after a gap (9 -> 1, longest stays 9)', () async {
+    await db.collection('users').doc('kid1').set({
+      'streak': {'current': 9, 'longest': 9, 'lastDate': threeDaysAgo},
+    }, SetOptions(merge: true));
+
+    await service.completeAuto(
+        quest: quest(points: 30, mode: QuestApprovalMode.auto), kidUid: 'kid1');
+
+    final streak = (await db.collection('users').doc('kid1').get())
+        .data()!['streak'] as Map;
+    expect(streak['current'], 1);
+    expect(streak['longest'], 9);
+  });
+
+  test('already counted today: no double-count, no extra milestone token',
+      () async {
+    // Seed streak at day 3 (a milestone day) already counted today, and
+    // earnedToday at today so points do not re-cross the daily goal.
+    // tokens seeded at 0 (default setUp). Note: fake_cloud_firestore resets a
+    // FieldValue.increment inside a transaction to the increment amount, so we
+    // assert the awarded delta directly rather than a pre-seeded baseline.
+    await db.collection('users').doc('kid1').set({
+      'streak': {'current': 3, 'longest': 3, 'lastDate': today},
+      'earnedToday': {'date': today, 'points': 0},
+    }, SetOptions(merge: true));
+
+    // Points below the daily goal of 50 so crossedDailyGoal is false.
+    await service.completeAuto(
+        quest: quest(points: 10, mode: QuestApprovalMode.auto), kidUid: 'kid1');
+
+    final user = (await db.collection('users').doc('kid1').get()).data()!;
+    final streak = user['streak'] as Map;
+    expect(streak['current'], 3); // unchanged, already counted today
+    final wallet = (await db.collection('wallets').doc('kid1').get()).data()!;
+    expect(wallet['tokens'], 0); // no goal crossing, no milestone awarded
+  });
+
+  test('milestone token lands when streak reaches day 7 (+3 tokens)', () async {
+    // Day 6 yesterday -> completing today pushes to day 7 (milestone).
+    await db.collection('users').doc('kid1').set({
+      'streak': {'current': 6, 'longest': 6, 'lastDate': yesterday},
+    }, SetOptions(merge: true));
+
+    // Points below the daily goal so the milestone token is isolated from the
+    // daily-goal token. tokens start at 0 from setUp; the transactional
+    // increment is the awarded amount (see note in the prior test).
+    await service.completeAuto(
+        quest: quest(points: 10, mode: QuestApprovalMode.auto), kidUid: 'kid1');
+
+    final streak = (await db.collection('users').doc('kid1').get())
+        .data()!['streak'] as Map;
+    expect(streak['current'], 7);
+    final wallet = (await db.collection('wallets').doc('kid1').get()).data()!;
+    expect(wallet['tokens'], 3); // day-7 milestone (+3), no goal crossing
+  });
+
   test('approve credits points + lifetime, never writes xp/level', () async {
     final id = await service.startQuest(quest: quest(), kidUid: 'kid1');
     await service.submit(id);
