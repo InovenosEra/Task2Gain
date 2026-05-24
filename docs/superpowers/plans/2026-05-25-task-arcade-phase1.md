@@ -828,7 +828,7 @@ class _EarnState {
 - [ ] **Step 5: Run the test to confirm pass**
 
 Run: `flutter test test/quest_instance_service_test.dart`
-Expected: PASS (5 tests after you delete the stray stub line).
+Expected: PASS (4 tests).
 
 - [ ] **Step 6: Commit**
 
@@ -2003,7 +2003,19 @@ class DailyGoalRing extends StatelessWidget {
 
 Replace the `_WalletHero` class body's stat row. Specifically:
 - In the `StreamBuilder` builder, **remove** the `level`, `xp`, `xpToNext`, and `progress` locals.
-- **Add** locals: `final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;`, `final dailyGoal = (user['dailyGoal'] as num?)?.toInt() ?? 50;`, and read today's earnings: `final earnedMap = (user['earnedToday'] as Map?)?.cast<String, dynamic>() ?? const {}; final earnedToday = (earnedMap['points'] as num?)?.toInt() ?? 0;`.
+- **Add** locals: `final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;`, `final dailyGoal = (user['dailyGoal'] as num?)?.toInt() ?? 50;`, and read today's earnings **date-gated** so a new day resets the ring (must match the UTC `YYYY-MM-DD` key the service writes):
+
+```dart
+                final now = DateTime.now().toUtc();
+                final todayKey =
+                    '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+                final earnedMap = (user['earnedToday'] as Map?)
+                        ?.cast<String, dynamic>() ??
+                    const {};
+                final earnedToday = (earnedMap['date'] as String?) == todayKey
+                    ? (earnedMap['points'] as num?)?.toInt() ?? 0
+                    : 0;
+```
 - Replace `_LevelBadge(level: level)` (in the top Row) with the daily-goal ring:
 
 ```dart
