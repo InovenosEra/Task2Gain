@@ -87,6 +87,16 @@ The three approved pillars and how they interlock:
   - **Approval-required:** completing shows an instant "✅ Submitted!" animation and a *pending* reward chip (`+50 pts pending`); points/tokens/combo land — with celebration — when a parent approves. A notification nudges the approver.
 - Default: photo-proof or high-value tasks → approval-required; everything else → auto. Parent can override per task.
 
+### 5.6 Mystery tasks (high-stakes guessing with a shrinking jackpot)
+A parent can flag a task as a **mystery task** — worth a deliberately **high** point pot, with its identity hidden behind a clue. The twist: **every wrong guess shrinks the pot**, so it's a race between curiosity and greed.
+
+- **Clue styles** (parent picks one): **hidden letters** (title with a portion blanked, Wordle/hangman style; spaces preserved), **icon/emoji riddle** (a hint emoji gesturing at the task), or **image riddle** (a parent-uploaded photo).
+- **The pot.** Starts at `maxPoints` (high). Each **wrong guess** shrinks it one step (e.g. −15% of max) down to a **floor** (`floorPoints`, ≥ the task's normal value). A **correct guess** locks in the *current* pot and reveals the task; the kid then completes it for that many points. Guess fast → keep more.
+- **Always net-positive (kid-safe).** Shrinking reduces the *potential reward*, never owned points, and never drops below the floor. A **"reveal / give up"** option sets the pot to the floor and unlocks the task so a stuck kid can still do it and earn.
+- **Hints on the way down** (hidden-letters style): each wrong guess also reveals one more letter — so it gets *easier* to guess exactly as the reward gets *smaller*. (Icon/image styles just shrink the pot in v1.)
+- **Matching guesses:** compared against the title plus optional parent-provided `acceptedAnswers`, after normalization (trim, collapse spaces, lenient punctuation, Hebrew-aware). Tunable.
+- **Feel:** a mystery task is a mini-event on the board — "🎁 ??? · 300 pts and dropping!" The reveal is a juicy animation. Pairs naturally with the daily power task and the Prize Machine theme.
+
 ## 6. The parent / admin role
 Parents wear two hats:
 - **Player** (same as kids): own daily goal, streak, tokens, Prize Machine, leaderboard rank, season track.
@@ -97,8 +107,8 @@ Parents wear two hats:
 **Changed**
 - `users/{uid}`: **remove** `xp`, `level`, `xpToNextLevel`. **Keep** `streak`. **Add** `dailyGoal` (int), `equippedCosmetics` (map).
 - `wallets/{uid}`: keep `points`, `moneyILS`, `lifetimeEarned`. **Add** `tokens` (int), `cosmeticsOwned` (list).
-- `quests/{id}`: **remove** `xpReward`. **Add** `approvalMode` (`auto`|`required`), `bonus` (e.g. power-task flag/multiplier), optional `assignedTo` (uid|null).
-- `questInstances/{id}`: **remove** `xpReward`. **Add** `comboMultiplier` (num), `tokensAwarded` (int), `pointsAwarded` already exists.
+- `quests/{id}`: **remove** `xpReward`. **Add** `approvalMode` (`auto`|`required`), `bonus` (e.g. power-task flag/multiplier), optional `assignedTo` (uid|null), and optional `mystery = { enabled, clueType: letters|icon|image, clueData, maxPoints, floorPoints, shrinkStep, acceptedAnswers[] }`.
+- `questInstances/{id}`: **remove** `xpReward`. **Add** `comboMultiplier` (num), `tokensAwarded` (int); `pointsAwarded` already exists. For mystery tasks: `guessesUsed` (int), `currentPot` (int), `revealed` (bool).
 - `badge.dart` / badges: **remove** level-based badges (`level_5`, `level_10`) and `BadgeMetrics.level`; **add** points/season/streak-based badges (e.g. `streak_7`, `season_gold`, `champion`).
 - `families/{id}.settings`: keep `pointToShekelRate`, `minPointsToConvert`. **Add** `seasonLengthDays`, `dailyGoalDefault`, `currentSeasonId`, `seasonEndsAt`.
 
@@ -112,12 +122,12 @@ Parents wear two hats:
 
 ## 8. Screens
 
-- **Home ("משימות" / Task Arcade dashboard) — redesigned.** Top: daily-goal **progress ring** + **streak flame** + today's **combo multiplier**; a compact **season strip** ("Tier 4 · 40 pts to next · #2 this season"); a **Prize Machine** entry showing tokens available; then the task list (with combo/bonus/pending states and juicy completion). Replaces today's level badge + XP bar.
+- **Home ("משימות" / Task Arcade dashboard) — redesigned.** Top: daily-goal **progress ring** + **streak flame** + today's **combo multiplier**; a compact **season strip** ("Tier 4 · 40 pts to next · #2 this season"); a **Prize Machine** entry showing tokens available; then the task list (with combo/bonus/pending **and mystery** states and juicy completion). A mystery task shows "🎁 ??? · {pot} pts" with its clue (blanked letters / hint icon / image) and a guess field with a live, dropping pot; the reveal is animated. Replaces today's level badge + XP bar.
 - **Prize Machine (new):** the games hub (wheel, scratch), token balance, recent wins.
 - **Season (new or merged into "משפחה"):** the reward track (claimable tiers) + the leaderboard/podium + season countdown + champion history.
 - **Wallet / Cash-out:** points balance, money, convert (unchanged logic), tokens shown.
 - **Reward shop ("חנות"):** unchanged purpose; gains cosmetics alongside parent rewards.
-- **Admin ("ניהול"):** existing + season config, prize/jackpot config, power-hour trigger, approval-mode on task form.
+- **Admin ("ניהול"):** existing + season config, prize/jackpot config, power-hour trigger, approval-mode on task form, and a **mystery-task toggle** (clue style + clue data, max/floor points, accepted answers) in the create/edit task form.
 
 ## 9. Removing XP / levels (explicit)
 Delete: `widgets/level_up_overlay.dart`, `widgets/level_change_listener.dart`, `_LevelBadge` & `_XpBar` in `home_tab.dart`, XP/level reads in `profile_tab.dart` and `family_tab.dart`, XP chips/labels in `quest_detail_screen.dart`, `approvals_screen.dart`, `admin_screen.dart`, `home_tab.dart`. Remove `_xpForDifficulty` and `xpReward` writes in `quest_service.dart`; remove the level-up loop and xp/level writes in `quest_instance_service.dart` (keep points + streak + badges). Remove xp/level init in `auth_service.dart`. Leaderboard sort changes from (level, xp) to **seasonPoints**. The integration harness's home assertions still hold (`משימות פתוחות`).
@@ -125,7 +135,7 @@ Delete: `widgets/level_up_overlay.dart`, `widgets/level_change_listener.dart`, `
 ## 10. Phasing (ship value early)
 
 - **Phase 1 — Feel + Prizes + Daily loop.** Remove XP/levels. Add instant feedback + auto-approve option + coin/celebration juice. Daily-goal ring + streak. Tokens + Prize Machine (Wheel + Scratch, no-loss). *This alone transforms the app.*
-- **Phase 2 — Combos + Power.** Daily combo multiplier, parent-triggered power hour, daily power task.
+- **Phase 2 — Combos + Power + Mystery.** Daily combo multiplier, parent-triggered power hour, daily power task, and **mystery tasks** (shrinking-jackpot guessing with hidden-letters / icon / image clues).
 - **Phase 3 — Seasons.** Season points + standings, reward track (claim), leaderboard revamp, champion + reset, cosmetics catalog.
 - **Phase 4 — Depth.** Plinko/vault, auto power hours, per-member task assignment, streak freezes, catch-up, champion history.
 
