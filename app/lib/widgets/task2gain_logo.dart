@@ -10,20 +10,29 @@ const _violet = Color(0xFF7B2CBF);
 /// hairline rules and evenly spaced around the hero numeral. Scales crisply
 /// at any size.
 class Task2GainLogo extends StatelessWidget {
-  const Task2GainLogo({super.key, this.size = 120});
+  const Task2GainLogo({super.key, this.size = 120, this.iconMode = false});
   final double size;
+
+  /// When true the badge fills the square edge-to-edge with no drop shadow,
+  /// so it can be exported as a platform app icon (the OS applies its own
+  /// rounded-corner mask).
+  final bool iconMode;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(painter: _LogoPainter()),
+      child: CustomPaint(painter: _LogoPainter(iconMode: iconMode)),
     );
   }
 }
 
 class _LogoPainter extends CustomPainter {
+  _LogoPainter({this.iconMode = false});
+
+  final bool iconMode;
+
   // Vertical centres (as fractions of height) — symmetric around 0.5 so the
   // three elements are evenly spaced.
   static const double _yTask = 0.155;
@@ -37,19 +46,22 @@ class _LogoPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
-    final radius = w * 0.26;
+    // Edge-to-edge for an app icon (OS masks corners); rounded badge otherwise.
+    final radius = iconMode ? 0.0 : w * 0.26;
     final rect = RRect.fromRectAndRadius(
       Rect.fromLTWH(0, 0, w, h),
       Radius.circular(radius),
     );
 
-    // Soft drop shadow.
-    canvas.drawRRect(
-      rect.shift(Offset(0, h * 0.04)),
-      Paint()
-        ..color = _gold.withValues(alpha: 0.25)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
-    );
+    // Soft drop shadow — skipped in icon mode (would leave empty corners).
+    if (!iconMode) {
+      canvas.drawRRect(
+        rect.shift(Offset(0, h * 0.04)),
+        Paint()
+          ..color = _gold.withValues(alpha: 0.25)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
+      );
+    }
 
     // Gradient body.
     final bodyPaint = Paint()
@@ -186,5 +198,6 @@ class _LogoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _LogoPainter oldDelegate) =>
+      oldDelegate.iconMode != iconMode;
 }
