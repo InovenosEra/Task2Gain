@@ -1,5 +1,5 @@
-name: task2pay
-description: "Task2Pay - אפליקציה משפחתית למשימות ותגמולים"
+name: task2gain
+description: "Task2Gain - אפליקציה משפחתית למשימות ותגמולים"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -36,6 +36,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
   intl: ^0.20.2
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.0
+  cloud_firestore: ^5.4.0
+  firebase_storage: ^12.3.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

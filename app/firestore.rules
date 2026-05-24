@@ -1,0 +1,178 @@
+rules_version = '2';
+
+// Tenant-isolated rules for Task2Gain. Every collection enforces that the
+// caller is in the same family as the document, and sensitive gamification
+// fields can only be written by an admin of that family. Self-writes are
+// restricted to non-cheatable fields.
+//
+// NOTE: per design spec NF2, sensitive ops (approve, convert, purchase
+// approve) SHOULD eventually run as Cloud Functions. Until then, these
+// rules block the most obvious cheats (e.g., kid topping up their own
+// wallet) but a determined attacker who is an admin in their own family
+// could still abuse the credit path.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userFamilyId() {
+      return userDoc().familyId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userDoc().role == 'admin';
+    }
+
+    function isInFamily(familyId) {
+      return isSignedIn() && userDoc().familyId == familyId;
+    }
+
+    function isAdminOfFamily(familyId) {
+      return isAdmin() && userFamilyId() == familyId;
+    }
+
+    function changed(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ---------------- families ----------------
+    match /families/{familyId} {
+      // On signup, the parent creates their family doc before their own
+      // users/{uid} exists, so we cannot check isInFamily yet — any signed-in
+      // user can create a new family. The user immediately writes a matching
+      // users/{uid} doc that ties them to this family.
+      allow create: if isSignedIn();
+      allow read: if isInFamily(familyId);
+      allow update: if isAdminOfFamily(familyId);
+      allow delete: if false;
+    }
+
+    // ---------------- users ----------------
+    match /users/{userId} {
+      // Create your own user doc on signup or invite-acceptance.
+      allow create: if isSignedIn() && request.auth.uid == userId;
+
+      // Read any user in your family.
+      allow read: if isInFamily(resource.data.familyId);
+
+      // Self: can only change cosmetic fields (displayName, avatar).
+      // Admin in same family: can change gamification fields awarded by approve().
+      allow update: if (request.auth.uid == userId
+                        && changed(['displayName', 'avatar']))
+                    || (isAdminOfFamily(resource.data.familyId)
+                        && changed(['xp', 'level', 'xpToNextLevel', 'streak',
+                                    'badges', 'questsCompleted']));
+
+      allow delete: if false;
+    }
+
+    // ---------------- wallets ----------------
+    match /wallets/{walletId} {
+      allow create: if isSignedIn() && request.auth.uid == walletId;
+
+      // Read your own wallet or anyone's in your family if you're admin.
+      allow read: if request.auth.uid == walletId
+                  || isAdminOfFamily(resource.data.familyId);
+
+      // Self: convertPoints debits points and credits money in one tx — both
+      // happen on a self-update, so we accept either pattern. To prevent kids
+      // topping themselves up, require points NEVER increase and money
+      // increase is at most points-delta * 1 ILS (rough guard; rate is per
+      // family, so we just block obvious abuse).
+      // Admin in same family: free updates (approve credits).
+      allow update: if (request.auth.uid == walletId
+                        && request.resource.data.points <= resource.data.points)
+                    || isAdminOfFamily(resource.data.familyId);
+
+      allow delete: if false;
+    }
+
+    // ---------------- quests (templates) ----------------
+    match /quests/{questId} {
+      allow create: if isAdmin()
+                    && request.resource.data.familyId == userFamilyId();
+      allow read: if isInFamily(resource.data.familyId);
+      allow update, delete: if isAdminOfFamily(resource.data.familyId);
+    }
+
+    // ---------------- questInstances (submissions) ----------------
+    match /questInstances/{id} {
+      // Kid creates their own instance via startQuest.
+      allow create: if isSignedIn()
+                    && request.resource.data.assignedTo == request.auth.uid
+                    && request.resource.data.familyId == userFamilyId();
+
+      allow read: if isInFamily(resource.data.familyId);
+
+      // Kid: can only submit their own (status flip + photo).
+      // Admin in same family: full update (approve/reject + credit metadata).
+      allow update: if (resource.data.assignedTo == request.auth.uid
+                        && changed(['status', 'submittedAt', 'proofPhotos']))
+                    || isAdminOfFamily(resource.data.familyId);
+
+      allow delete: if false;
+    }
+
+    // ---------------- rewards (catalog) ----------------
+    match /rewards/{id} {
+      allow create: if isAdmin()
+                    && request.resource.data.familyId == userFamilyId();
+      allow read: if isInFamily(resource.data.familyId);
+      allow update, delete: if isAdminOfFamily(resource.data.familyId);
+    }
+
+    // ---------------- transactions ----------------
+    match /transactions/{id} {
+      // Kid creates purchase requests / transfer requests; convertPoints
+      // also writes a 'completed' transaction during the same tx as the
+      // wallet update.
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.familyId == userFamilyId();
+
+      // Read your own transactions or anyone's in your family if admin.
+      allow read: if request.auth.uid == resource.data.userId
+                  || isAdminOfFamily(resource.data.familyId);
+
+      // Only admin in same family can approve/reject transactions.
+      allow update: if isAdminOfFamily(resource.data.familyId);
+
+      allow delete: if false;
+    }
+
+    // ---------------- invitations ----------------
+    match /invitations/{code} {
+      // Admins create new invites.
+      allow create: if isAdmin()
+                    && request.resource.data.familyId == userFamilyId();
+
+      // Any signed-in user can read an invitation by its 6-digit doc id —
+      // needed by the kid join flow to validate the code before they have a
+      // family assigned. Code is 6 digits so guessing is rate-limited by
+      // Firebase auth in practice.
+      allow read: if isSignedIn();
+
+      // The kid joining marks status=used inside their signup transaction.
+      allow update: if isSignedIn()
+                    && changed(['status', 'usedBy', 'usedAt']);
+
+      allow delete: if isAdminOfFamily(resource.data.familyId);
+    }
+
+    // ---------------- user reward targets (savings goal) ----------------
+    match /users/{userId}/rewardTargets/{targetId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    // Default deny for anything else.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// Storage rules for Task2Gain. Quest proof photos live under
+//   quest-proofs/{familyId}/{instanceId}/{file}
+// Only members of the matching family can read; only the assigned kid can
+// write a new file to their own instance's path.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return firestore.get(
+        /databases/(default)/documents/users/$(request.auth.uid)
+      ).data;
+    }
+
+    function userFamilyId() {
+      return userDoc().familyId;
+    }
+
+    // ---------------- quest proof photos ----------------
+    match /quest-proofs/{familyId}/{instanceId}/{file} {
+      // Members of the family can view proof photos.
+      allow read: if isSignedIn() && userFamilyId() == familyId;
+
+      // Only the kid that owns the quest instance can upload — check via
+      // the questInstance doc that assignedTo matches the uploader.
+      allow write: if isSignedIn()
+        && userFamilyId() == familyId
+        && firestore.get(
+             /databases/(default)/documents/questInstances/$(instanceId)
+           ).data.assignedTo == request.auth.uid
+        // basic size / type guards
+        && request.resource.size < 6 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Default deny for anything else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

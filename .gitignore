@@ -25,3 +25,8 @@ build/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Firebase per-app secrets (keep out of public repo)
+**/GoogleService-Info.plist
+**/google-services.json
+app/lib/firebase_options.dart
