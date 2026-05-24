@@ -13,6 +13,7 @@ import '../widgets/screen_background.dart';
 import 'admin_screen.dart';
 import 'family_tab.dart';
 import 'home_tab.dart';
+import 'prize_machine_screen.dart';
 import 'profile_tab.dart';
 import 'shop_tab.dart';
 import 'welcome_screen.dart';
@@ -132,6 +133,12 @@ class _TabHost extends StatelessWidget {
           activeIcon: Icons.assignment_rounded,
           label: 'משימות',
           builder: (ctx) => HomeTab(data: data),
+        ),
+        _TabSpec(
+          icon: Icons.casino_outlined,
+          activeIcon: Icons.casino_rounded,
+          label: 'פרסים',
+          builder: (ctx) => PrizeMachineScreen(data: data),
         ),
         _TabSpec(
           icon: Icons.card_giftcard_outlined,
