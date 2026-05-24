@@ -8,6 +8,7 @@ import '../widgets/animated_counter.dart';
 import '../widgets/avatar_picker.dart';
 import '../widgets/gradient_text.dart';
 import '../widgets/glow_card.dart';
+import '../widgets/daily_goal_ring.dart';
 import '../widgets/page_routes.dart';
 import '../widgets/scale_tap.dart';
 import 'convert_points_screen.dart';
@@ -191,21 +192,26 @@ class _WalletHero extends StatelessWidget {
           builder: (context, walletSnap) {
             final user = userSnap.data?.data() ?? const {};
             final wallet = walletSnap.data?.data() ?? const {};
-            final level = (user['level'] as num?)?.toInt() ?? 1;
-            final xp = (user['xp'] as num?)?.toInt() ?? 0;
-            final xpToNext =
-                (user['xpToNextLevel'] as num?)?.toInt() ?? 100;
             final points = (wallet['points'] as num?)?.toInt() ?? 0;
             final money =
                 (wallet['moneyILS'] as num?)?.toDouble() ?? 0.0;
+            final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
+            final dailyGoal =
+                (user['dailyGoal'] as num?)?.toInt() ?? 50;
+            final now = DateTime.now().toUtc();
+            final todayKey =
+                '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+            final earnedMap = (user['earnedToday'] as Map?)
+                    ?.cast<String, dynamic>() ??
+                const {};
+            final earnedToday = (earnedMap['date'] as String?) == todayKey
+                ? (earnedMap['points'] as num?)?.toInt() ?? 0
+                : 0;
             final streakMap = (user['streak'] as Map?)
                     ?.cast<String, dynamic>() ??
                 const {};
             final streakDays =
                 (streakMap['current'] as num?)?.toInt() ?? 0;
-            final progress = xpToNext == 0
-                ? 0.0
-                : (xp / xpToNext).clamp(0.0, 1.0);
 
             return GlowCard(
               glowColor: AppPalette.gold,
@@ -292,7 +298,8 @@ class _WalletHero extends StatelessWidget {
                           ],
                         ),
                       ),
-                      _LevelBadge(level: level),
+                      DailyGoalRing(
+                          earnedToday: earnedToday, goal: dailyGoal),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -301,35 +308,7 @@ class _WalletHero extends StatelessWidget {
                       _StreakFlame(days: streakDays),
                       const SizedBox(width: 14),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'XP',
-                                  style: bodyFont(
-                                    size: 11,
-                                    color: Colors.white54,
-                                    letterSpacing: 0.4,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  '$xp / $xpToNext',
-                                  style: bodyFont(
-                                    size: 12,
-                                    color: Colors.white,
-                                    weight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            _XpBar(progress: progress),
-                          ],
-                        ),
+                        child: _TokensChip(tokens: tokens),
                       ),
                     ],
                   ),
@@ -343,47 +322,27 @@ class _WalletHero extends StatelessWidget {
   }
 }
 
-class _LevelBadge extends StatelessWidget {
-  const _LevelBadge({required this.level});
-  final int level;
+class _TokensChip extends StatelessWidget {
+  const _TokensChip({required this.tokens});
+  final int tokens;
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 70,
-      height: 70,
-      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: AppPalette.heroGrad,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppPalette.pink.withValues(alpha: 0.4),
-            blurRadius: 18,
-            spreadRadius: 1,
-          ),
-        ],
+        color: AppPalette.violet.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppPalette.violet.withValues(alpha: 0.4)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          Text(
-            'LV',
-            style: bodyFont(
-              size: 9,
-              color: Colors.white.withValues(alpha: 0.8),
-              weight: FontWeight.w800,
-              letterSpacing: 1,
-            ),
-          ),
-          Text(
-            '$level',
-            style: displayFont(
-                size: 26, weight: FontWeight.w900, height: 1.0),
-          ),
+          const Text('🎟️', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 8),
+          Text('$tokens אסימונים',
+              style: displayFont(size: 15, weight: FontWeight.w900)),
+          const Spacer(),
+          Text('למכונת הפרסים →',
+              style: bodyFont(size: 11, color: Colors.white54)),
         ],
       ),
     );
@@ -432,39 +391,6 @@ class _StreakFlame extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _XpBar extends StatelessWidget {
-  const _XpBar({required this.progress});
-  final double progress;
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 12,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Container(
-              color: Colors.white.withValues(alpha: 0.08),
-            ),
-            AnimatedFractionallySizedBox(
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeOutCubic,
-              widthFactor: progress,
-              heightFactor: 1.0,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: AppPalette.heroGrad),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -583,8 +509,6 @@ class _QuestCard extends StatelessWidget {
                       children: [
                         _miniTag(
                             '${quest.points} ⭐', grad.first),
-                        _miniTag(
-                            '${quest.xpReward} XP', grad.last),
                         _miniTag(quest.recurrence.label,
                             Colors.white.withValues(alpha: 0.45)),
                       ],
