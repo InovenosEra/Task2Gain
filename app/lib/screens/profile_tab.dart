@@ -8,7 +8,7 @@ import '../widgets/scale_tap.dart';
 import 'badges_screen.dart';
 import 'main_navigation.dart';
 
-/// Profile tab — big avatar + wallet/level summary + entry points to badges
+/// Profile tab — big avatar + wallet summary + entry points to badges
 /// and a sign-out action.
 class ProfileTab extends StatelessWidget {
   const ProfileTab({
