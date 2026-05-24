@@ -128,28 +128,33 @@ class _TabHost extends StatelessWidget {
 
   List<_TabSpec> get _tabs => [
         _TabSpec(
-          emoji: '🏠',
+          icon: Icons.home_outlined,
+          activeIcon: Icons.home_rounded,
           label: 'בית',
           builder: (ctx) => HomeTab(data: data),
         ),
         _TabSpec(
-          emoji: '🎁',
+          icon: Icons.card_giftcard_outlined,
+          activeIcon: Icons.card_giftcard_rounded,
           label: 'חנות',
           builder: (ctx) => ShopTab(data: data),
         ),
         _TabSpec(
-          emoji: '🏆',
+          icon: Icons.emoji_events_outlined,
+          activeIcon: Icons.emoji_events_rounded,
           label: 'משפחה',
           builder: (ctx) => FamilyTab(data: data),
         ),
         _TabSpec(
-          emoji: '👤',
+          icon: Icons.person_outline_rounded,
+          activeIcon: Icons.person_rounded,
           label: 'פרופיל',
           builder: (ctx) => ProfileTab(data: data, onSignOut: onSignOut),
         ),
         if (_isAdmin)
           _TabSpec(
-            emoji: '⚙️',
+            icon: Icons.settings_outlined,
+            activeIcon: Icons.settings_rounded,
             label: 'ניהול',
             builder: (ctx) => AdminScreen(familyId: data.familyId),
             isAdminTab: true,
@@ -191,12 +196,14 @@ class _TabHost extends StatelessWidget {
 
 class _TabSpec {
   const _TabSpec({
-    required this.emoji,
+    required this.icon,
+    required this.activeIcon,
     required this.label,
     required this.builder,
     this.isAdminTab = false,
   });
-  final String emoji;
+  final IconData icon;
+  final IconData activeIcon;
   final String label;
   final WidgetBuilder builder;
   final bool isAdminTab;
@@ -299,13 +306,12 @@ class _NavItem extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  spec.emoji,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: selected ? 22 : 20,
-                    height: 1.0,
-                  ),
+                Icon(
+                  selected ? spec.activeIcon : spec.icon,
+                  size: selected ? 25 : 23,
+                  color: selected
+                      ? AppPalette.gold
+                      : Colors.white.withValues(alpha: 0.55),
                 ),
                 const SizedBox(height: 4),
                 Text(
