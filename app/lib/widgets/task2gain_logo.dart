@@ -26,9 +26,9 @@ class Task2GainLogo extends StatelessWidget {
 class _LogoPainter extends CustomPainter {
   // Vertical centres (as fractions of height) — symmetric around 0.5 so the
   // three elements are evenly spaced.
-  static const double _yTask = 0.205;
+  static const double _yTask = 0.155;
   static const double _yTwo = 0.5;
-  static const double _yGain = 0.795;
+  static const double _yGain = 0.845;
 
   // Heebo cap-height ≈ 0.70 of font size; used to centre glyphs visually.
   static const double _capRatio = 0.70;
