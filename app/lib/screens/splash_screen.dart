@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/gradient_text.dart';
 import '../widgets/screen_background.dart';
 import '../widgets/task2gain_logo.dart';
 import 'main_navigation.dart';
@@ -106,13 +107,18 @@ class _SplashScreenState extends State<SplashScreen>
                         const Task2GainLogo(size: 160),
                       ],
                     ),
-                    const SizedBox(height: 28),
-                    Text(
-                      'משפחה. משימות. פרסים.',
-                      style: bodyFont(
-                        size: 16,
-                        color: Colors.white70,
-                        weight: FontWeight.w500,
+                    // Pull the tagline up into the logo's glow so it reads as
+                    // part of the mark, and paint it in the logo gradient.
+                    Transform.translate(
+                      offset: const Offset(0, -32),
+                      child: GradientText(
+                        'משפחה. משימות. פרסים.',
+                        textAlign: TextAlign.center,
+                        style: bodyFont(
+                          size: 16,
+                          weight: FontWeight.w700,
+                        ),
+                        colors: AppPalette.heroGrad,
                       ),
                     ),
                   ],
