@@ -12,7 +12,8 @@ class QuestInstance {
     required this.title,
     required this.icon,
     required this.points,
-    required this.xpReward,
+    required this.comboMultiplier,
+    required this.tokensAwarded,
     required this.submittedAt,
     required this.approvedBy,
     required this.approvedAt,
@@ -28,7 +29,8 @@ class QuestInstance {
   final String title;
   final String icon;
   final int points;
-  final int xpReward;
+  final double comboMultiplier;
+  final int tokensAwarded;
   final DateTime? submittedAt;
   final String? approvedBy;
   final DateTime? approvedAt;
@@ -47,7 +49,8 @@ class QuestInstance {
       title: (d['title'] as String?) ?? '',
       icon: (d['icon'] as String?) ?? '⚡',
       points: (d['points'] as num?)?.toInt() ?? 0,
-      xpReward: (d['xpReward'] as num?)?.toInt() ?? 0,
+      comboMultiplier: (d['comboMultiplier'] as num?)?.toDouble() ?? 1.0,
+      tokensAwarded: (d['tokensAwarded'] as num?)?.toInt() ?? 0,
       submittedAt: (d['submittedAt'] as Timestamp?)?.toDate(),
       approvedBy: d['approvedBy'] as String?,
       approvedAt: (d['approvedAt'] as Timestamp?)?.toDate(),

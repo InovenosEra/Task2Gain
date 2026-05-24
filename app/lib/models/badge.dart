@@ -2,14 +2,12 @@
 /// approval transaction so badges only ever unlock from a verified state.
 class BadgeMetrics {
   const BadgeMetrics({
-    required this.level,
     required this.lifetimePoints,
     required this.currentStreak,
     required this.longestStreak,
     required this.questsCompleted,
   });
 
-  final int level;
   final int lifetimePoints;
   final int currentStreak;
   final int longestStreak;
@@ -55,20 +53,6 @@ const badgeCatalog = <BadgeDefinition>[
     unlocked: _quests50,
   ),
   BadgeDefinition(
-    id: 'level_5',
-    title: 'עולה רמה',
-    description: 'הגעת לרמה 5',
-    icon: '🎯',
-    unlocked: _level5,
-  ),
-  BadgeDefinition(
-    id: 'level_10',
-    title: 'אגדי',
-    description: 'הגעת לרמה 10',
-    icon: '👑',
-    unlocked: _level10,
-  ),
-  BadgeDefinition(
     id: 'streak_3',
     title: 'בעיניים פקוחות',
     description: 'רצף של 3 ימים',
@@ -81,6 +65,13 @@ const badgeCatalog = <BadgeDefinition>[
     description: 'רצף של 7 ימים',
     icon: '🔥',
     unlocked: _streak7,
+  ),
+  BadgeDefinition(
+    id: 'streak_14',
+    title: 'שבועיים ברצף',
+    description: 'רצף של 14 ימים',
+    icon: '🔥',
+    unlocked: _streak14,
   ),
   BadgeDefinition(
     id: 'streak_30',
@@ -101,9 +92,8 @@ const badgeCatalog = <BadgeDefinition>[
 bool _firstQuest(BadgeMetrics m) => m.questsCompleted >= 1;
 bool _quests10(BadgeMetrics m) => m.questsCompleted >= 10;
 bool _quests50(BadgeMetrics m) => m.questsCompleted >= 50;
-bool _level5(BadgeMetrics m) => m.level >= 5;
-bool _level10(BadgeMetrics m) => m.level >= 10;
 bool _streak3(BadgeMetrics m) => m.longestStreak >= 3;
 bool _streak7(BadgeMetrics m) => m.longestStreak >= 7;
+bool _streak14(BadgeMetrics m) => m.longestStreak >= 14;
 bool _streak30(BadgeMetrics m) => m.longestStreak >= 30;
 bool _points1000(BadgeMetrics m) => m.lifetimePoints >= 1000;

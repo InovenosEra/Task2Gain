@@ -37,8 +37,8 @@ class QuestService {
     required QuestDifficulty difficulty,
     required QuestProof proofRequired,
     required QuestRecurrence recurrence,
+    required QuestApprovalMode approvalMode,
   }) async {
-    final xp = _xpForDifficulty(difficulty, points);
     final ref = await _coll.add({
       'familyId': familyId,
       'createdBy': createdBy,
@@ -46,10 +46,10 @@ class QuestService {
       'description': description,
       'icon': icon,
       'points': points,
-      'xpReward': xp,
       'difficulty': difficulty.serialized,
       'proofRequired': proofRequired.serialized,
       'recurrence': recurrence.serialized,
+      'approvalMode': approvalMode.serialized,
       'active': true,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -69,26 +69,17 @@ class QuestService {
     required QuestDifficulty difficulty,
     required QuestProof proofRequired,
     required QuestRecurrence recurrence,
+    required QuestApprovalMode approvalMode,
   }) {
-    final xp = _xpForDifficulty(difficulty, points);
     return _coll.doc(questId).update({
       'title': title,
       'description': description,
       'icon': icon,
       'points': points,
-      'xpReward': xp,
       'difficulty': difficulty.serialized,
       'proofRequired': proofRequired.serialized,
       'recurrence': recurrence.serialized,
+      'approvalMode': approvalMode.serialized,
     });
-  }
-
-  int _xpForDifficulty(QuestDifficulty d, int points) {
-    final multiplier = switch (d) {
-      QuestDifficulty.easy => 1.0,
-      QuestDifficulty.medium => 1.5,
-      QuestDifficulty.epic => 2.5,
-    };
-    return (points * multiplier).round();
   }
 }

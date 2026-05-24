@@ -6,6 +6,8 @@ enum QuestProof { none, photo, beforeAfter }
 
 enum QuestRecurrence { once, daily, weekly }
 
+enum QuestApprovalMode { auto, required }
+
 class Quest {
   const Quest({
     required this.id,
@@ -14,7 +16,7 @@ class Quest {
     required this.description,
     required this.icon,
     required this.points,
-    required this.xpReward,
+    required this.approvalMode,
     required this.difficulty,
     required this.proofRequired,
     required this.recurrence,
@@ -29,7 +31,7 @@ class Quest {
   final String description;
   final String icon;
   final int points;
-  final int xpReward;
+  final QuestApprovalMode approvalMode;
   final QuestDifficulty difficulty;
   final QuestProof proofRequired;
   final QuestRecurrence recurrence;
@@ -46,7 +48,7 @@ class Quest {
       description: (d['description'] as String?) ?? '',
       icon: (d['icon'] as String?) ?? '⚡',
       points: (d['points'] as num?)?.toInt() ?? 0,
-      xpReward: (d['xpReward'] as num?)?.toInt() ?? 0,
+      approvalMode: _parseApprovalMode(d['approvalMode'] as String?),
       difficulty: _parseDifficulty(d['difficulty'] as String?),
       proofRequired: _parseProof(d['proofRequired'] as String?),
       recurrence: _parseRecurrence(d['recurrence'] as String?),
@@ -78,6 +80,15 @@ class Quest {
     }
   }
 
+  static QuestApprovalMode _parseApprovalMode(String? v) {
+    switch (v) {
+      case 'required':
+        return QuestApprovalMode.required;
+      default:
+        return QuestApprovalMode.auto;
+    }
+  }
+
   static QuestRecurrence _parseRecurrence(String? v) {
     switch (v) {
       case 'daily':
@@ -99,6 +110,19 @@ extension QuestDifficultyLabel on QuestDifficulty {
         return 'בינוני';
       case QuestDifficulty.epic:
         return 'אפי';
+    }
+  }
+
+  String get serialized => name;
+}
+
+extension QuestApprovalModeLabel on QuestApprovalMode {
+  String get label {
+    switch (this) {
+      case QuestApprovalMode.auto:
+        return 'אישור אוטומטי';
+      case QuestApprovalMode.required:
+        return 'דורש אישור הורה';
     }
   }
 
