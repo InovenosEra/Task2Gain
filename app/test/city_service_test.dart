@@ -96,6 +96,31 @@ void main() {
     );
   });
 
+  test('removeBuilding deletes it and refunds half its value', () async {
+    await service.placeBuilding(
+        uid: 'kid1', typeId: 'shop', gridX: 1, gridY: 1); // cost 20 -> tokens 80
+    await service.upgradeBuilding(
+        uid: 'kid1', gridX: 1, gridY: 1); // to lvl2, cost 40 -> tokens 40
+
+    // shop value at level 2 = baseTokenCost(20) * 2 = 40; refund = 20.
+    final refund =
+        await service.removeBuilding(uid: 'kid1', gridX: 1, gridY: 1);
+    expect(refund, 20);
+
+    final w = (await db.collection('wallets').doc('kid1').get()).data()!;
+    expect(w['tokens'], 60); // 40 + 20 refund
+    final c = City.fromDoc(
+        'kid1', (await db.collection('cities').doc('kid1').get()).data());
+    expect(c.isOccupied(1, 1), isFalse);
+  });
+
+  test('removeBuilding throws when no building at cell', () async {
+    expect(
+      () => service.removeBuilding(uid: 'kid1', gridX: 7, gridY: 7),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('renameCity stores a trimmed, capped name without touching buildings',
       () async {
     await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);

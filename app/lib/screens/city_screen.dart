@@ -137,6 +137,49 @@ class _CityScreenState extends State<CityScreen> {
     }
   }
 
+  Future<void> _removeSelected() async {
+    final cell = _selectedCell;
+    if (cell == null) return;
+    final idx = _city.indexAt(cell.x, cell.y);
+    if (idx < 0) return;
+    final b = _city.buildings[idx];
+    final type = buildingTypeById(b.typeId);
+    final refund = type == null ? 0 : type.valueAtLevel(b.level) ~/ 2;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: AppPalette.surface,
+          title: Text('להסיר את המבנה?', style: displayFont(size: 18)),
+          content: Text('יוחזרו לך $refund אסימונים.',
+              style: bodyFont(size: 15, color: Colors.white70)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text('ביטול', style: bodyFont(color: Colors.white60)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text('הסרה', style: bodyFont(color: AppPalette.pink)),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final refunded = await _cityService.removeBuilding(
+          uid: widget.data.uid, gridX: cell.x, gridY: cell.y);
+      _deselect();
+      _toast('המבנה הוסר · +$refunded אסימונים');
+    } on StateError catch (e) {
+      _toast(e.message);
+    } catch (e) {
+      _toast('שגיאה: $e');
+    }
+  }
+
   Future<void> _upgradeSelected() async {
     final cell = _selectedCell;
     if (cell == null) return;
@@ -341,7 +384,7 @@ class _CityScreenState extends State<CityScreen> {
     final type = buildingTypeById(b.typeId);
     final nextCost = type?.tokenCostForLevel(b.level + 1) ?? 0;
     final anchor = _game.anchorAbove(cell.x, cell.y);
-    const w = 150.0;
+    const w = 196.0;
     return Positioned(
       left: anchor.dx - w / 2,
       top: anchor.dy - 78,
@@ -375,35 +418,53 @@ class _CityScreenState extends State<CityScreen> {
                         weight: FontWeight.w900,
                         color: _Chrome.ink)),
                 const SizedBox(height: 6),
-                GestureDetector(
-                  onTap: _upgradeSelected,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          colors: [AppPalette.gold, AppPalette.goldDeep]),
-                      borderRadius: BorderRadius.circular(12),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: _upgradeSelected,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                              colors: [AppPalette.gold, AppPalette.goldDeep]),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('שדרוג',
+                                style: displayFont(
+                                    size: 13,
+                                    weight: FontWeight.w900,
+                                    color: Colors.white)),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.bolt_rounded,
+                                size: 14, color: Colors.white),
+                            Text('$nextCost',
+                                style: displayFont(
+                                    size: 13,
+                                    weight: FontWeight.w900,
+                                    color: Colors.white)),
+                          ],
+                        ),
+                      ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('שדרוג',
-                            style: displayFont(
-                                size: 13,
-                                weight: FontWeight.w900,
-                                color: Colors.white)),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.bolt_rounded,
-                            size: 14, color: Colors.white),
-                        Text('$nextCost',
-                            style: displayFont(
-                                size: 13,
-                                weight: FontWeight.w900,
-                                color: Colors.white)),
-                      ],
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: _removeSelected,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFDE7EC),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.delete_outline_rounded,
+                            size: 18, color: AppPalette.pink),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),

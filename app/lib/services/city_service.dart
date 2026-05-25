@@ -149,6 +149,41 @@ class CityService {
     });
   }
 
+  /// Removes the building at ([gridX],[gridY]) and refunds half of its current
+  /// value in tokens (XP already earned is kept; the partial refund + the daily
+  /// XP→token cap keep build/demolish from being a farm). Returns the refund.
+  Future<int> removeBuilding({
+    required String uid,
+    required int gridX,
+    required int gridY,
+  }) async {
+    return _firestore.runTransaction<int>((tx) async {
+      final citySnap = await tx.get(_cityRef(uid));
+      final walletSnap = await tx.get(_walletRef(uid));
+      if (!walletSnap.exists) throw StateError('ארנק לא נמצא');
+
+      final city = City.fromDoc(uid, citySnap.data());
+      final idx = city.indexAt(gridX, gridY);
+      if (idx < 0) throw StateError('אין מבנה במשבצת הזו');
+
+      final existing = city.buildings[idx];
+      final type = buildingTypeById(existing.typeId);
+      final refund = type == null ? 0 : type.valueAtLevel(existing.level) ~/ 2;
+
+      final buildings = [...city.buildings]..removeAt(idx);
+      final wallet = walletSnap.data()!;
+      final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
+
+      tx.set(_cityRef(uid), {
+        'uid': uid,
+        'buildings': buildings.map((b) => b.toMap()).toList(),
+      }, SetOptions(merge: true));
+      tx.update(_walletRef(uid), {'tokens': tokens + refund});
+
+      return refund;
+    });
+  }
+
   /// Renames the city. Trimmed; capped to a sane length. Stored alongside the
   /// buildings on the same city doc (merge so buildings are untouched).
   Future<void> renameCity(String uid, String name) {
