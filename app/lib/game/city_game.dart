@@ -65,6 +65,12 @@ class CityGame extends FlameGame with TapCallbacks {
         roof: _Roof.flat, roofColor: Color(0xFFF4B942), baseH: 26, perLevel: 12),
     'apartment': _Style(
         roof: _Roof.flat, roofColor: Color(0xFF57C9A0), baseH: 38, perLevel: 18),
+    'tower': _Style(
+        roof: _Roof.flat,
+        roofColor: Color(0xFF6E9BE8),
+        baseH: 64,
+        perLevel: 28,
+        glass: true),
     'park': _Style(roof: _Roof.none, roofColor: Color(0xFF57C9A0), kind: _Kind.park),
     'decor': _Style(roof: _Roof.none, roofColor: Color(0xFFF4B942), kind: _Kind.decor),
     'road': _Style(roof: _Roof.none, roofColor: Color(0xFFAEB4C0), kind: _Kind.road),
@@ -285,22 +291,34 @@ class CityGame extends FlameGame with TapCallbacks {
     Offset c(num gx, num gy) => _iso(gx, gy); // base
     Offset t(num gx, num gy) => _iso(gx, gy, h); // wall top
 
-    // Right wall (in shadow) + front-right wall (mid).
-    _face(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
-        _shade(_wall, 0.74));
-    _face(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
-        _shade(_wall, 0.88));
+    final floors = (h / 14).round().clamp(2, 12);
+    if (style.glass) {
+      // Glass curtain-wall skyscraper: tinted gradient + mullion grid + sheen.
+      _glassFace(canvas, c(x1, y0), c(x1, y1), t(x1, y0), t(x1, y1),
+          style.roofColor, 0.82, 3, floors, sheen: false);
+      _glassFace(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1),
+          style.roofColor, 1.0, 3, floors, sheen: true);
+      // Glass lobby entrance.
+      _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 0.38, 0.62,
+          0.0, 0.12, _shade(style.roofColor, 0.5));
+    } else {
+      // Right wall (in shadow) + front-right wall (mid).
+      _face(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
+          _shade(_wall, 0.74));
+      _face(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
+          _shade(_wall, 0.88));
 
-    // Windows: more rows the taller it is.
-    final rows = (h / 16).round().clamp(1, 5);
-    _windows(canvas, c(x1, y0), c(x1, y1), t(x1, y0), t(x1, y1), 2, rows,
-        _shade(_glass, 0.82));
-    _windows(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 2, rows,
-        _glass);
+      // Windows: more rows the taller it is.
+      final rows = (h / 16).round().clamp(1, 5);
+      _windows(canvas, c(x1, y0), c(x1, y1), t(x1, y0), t(x1, y1), 2, rows,
+          _shade(_glass, 0.82));
+      _windows(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 2, rows,
+          _glass);
 
-    // Door on the front-right face, ground-level centre.
-    _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1),
-        0.40, 0.60, 0.0, 0.30 * (16 / h).clamp(0.4, 1.0), const Color(0xFF8A5A3B));
+      // Door on the front-right face, ground-level centre.
+      _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 0.40, 0.60,
+          0.0, 0.30 * (16 / h).clamp(0.4, 1.0), const Color(0xFF8A5A3B));
+    }
 
     // Roof.
     final rim = [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)];
@@ -330,6 +348,20 @@ class CityGame extends FlameGame with TapCallbacks {
       _face(canvas, [rim[2], rim[3], l(3), l(2)],
           _shade(style.roofColor, 0.85));
       _face(canvas, [l(0), l(1), l(2), l(3)], _shade(style.roofColor, 1.12));
+      // Skyscraper: a thin rooftop antenna.
+      if (style.glass) {
+        final cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+        final base = _iso(cx, cy, h);
+        canvas.drawLine(
+          Offset(base.dx, base.dy - 6),
+          Offset(base.dx, base.dy - 26),
+          Paint()
+            ..color = const Color(0xFFCBD5E1)
+            ..strokeWidth = 2,
+        );
+        canvas.drawCircle(Offset(base.dx, base.dy - 26), 2.5,
+            Paint()..color = const Color(0xFFEF476F));
+      }
     }
 
     if (b.level > 1) {
@@ -351,6 +383,55 @@ class CityGame extends FlameGame with TapCallbacks {
       ..lineTo(at(u0, v1).dx, at(u0, v1).dy)
       ..close();
     canvas.drawPath(path, Paint()..color = color);
+  }
+
+  /// A glass curtain-wall face: a vertical blue-glass gradient with a mullion
+  /// grid, and (optionally) a bright sheen streak. [shadeF] dims the whole
+  /// face for the shadowed side.
+  void _glassFace(Canvas canvas, Offset baseA, Offset baseB, Offset topA,
+      Offset topB, Color tint, double shadeF, int cols, int rows,
+      {bool sheen = false}) {
+    Offset at(double u, double v) => Offset.lerp(
+        Offset.lerp(baseA, baseB, u)!, Offset.lerp(topA, topB, u)!, v)!;
+    final ring = Path()
+      ..moveTo(baseA.dx, baseA.dy)
+      ..lineTo(baseB.dx, baseB.dy)
+      ..lineTo(topB.dx, topB.dy)
+      ..lineTo(topA.dx, topA.dy)
+      ..close();
+    // Darker at the base, brighter toward the top (sky reflection).
+    final shader = Gradient.linear(
+      Offset.lerp(baseA, baseB, 0.5)!,
+      Offset.lerp(topA, topB, 0.5)!,
+      [_shade(tint, 0.72 * shadeF), _shade(tint, 1.16 * shadeF)],
+    );
+    canvas.drawPath(ring, Paint()..shader = shader);
+
+    // Mullion grid (thin darker lines between glass panels).
+    final mull = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = _shade(tint, 0.6 * shadeF);
+    for (var i = 1; i < cols; i++) {
+      final u = i / cols;
+      canvas.drawLine(at(u, 0), at(u, 1), mull);
+    }
+    for (var j = 1; j < rows; j++) {
+      final v = j / rows;
+      canvas.drawLine(at(0, v), at(1, v), mull);
+    }
+
+    // Sheen: a bright vertical reflection streak on the lit face.
+    if (sheen) {
+      final streak = Path()
+        ..moveTo(at(0.16, 0).dx, at(0.16, 0).dy)
+        ..lineTo(at(0.26, 0).dx, at(0.26, 0).dy)
+        ..lineTo(at(0.26, 1).dx, at(0.26, 1).dy)
+        ..lineTo(at(0.16, 1).dx, at(0.16, 1).dy)
+        ..close();
+      canvas.drawPath(
+          streak, Paint()..color = _shade(tint, 1.45 * shadeF).withValues(alpha: 0.55));
+    }
   }
 
   /// A small brick chimney sitting on the roof at grid ([gx],[gy]), rising
@@ -615,6 +696,7 @@ class _Style {
     this.baseH = 26,
     this.perLevel = 14,
     this.kind = _Kind.building,
+    this.glass = false,
   });
 
   final _Roof roof;
@@ -622,6 +704,10 @@ class _Style {
   final double baseH;
   final double perLevel;
   final _Kind kind;
+
+  /// When true the walls render as a blue glass curtain wall (mullion grid +
+  /// sheen) instead of cream walls with sparse windows — i.e. a skyscraper.
+  final bool glass;
 }
 
 class _FloatText {
