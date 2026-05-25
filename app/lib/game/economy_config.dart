@@ -1,4 +1,4 @@
-/// Central economy tuning for Little City. Tweak the game's feel here.
+// Central economy tuning for Little City. Tweak the game's feel here.
 
 /// Tokens every brand-new player starts with (play-fuel before any chore).
 const int kStartingTokens = 100;
