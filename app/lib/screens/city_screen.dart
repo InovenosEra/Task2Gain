@@ -183,6 +183,14 @@ class _CityScreenState extends State<CityScreen> {
     setState(() => _trayOpen = false);
   }
 
+  void _deselect() {
+    if (_selectedCell == null) return;
+    setState(() {
+      _selectedCell = null;
+      _game.setSelected(null, null);
+    });
+  }
+
   void _toast(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -307,6 +315,16 @@ class _CityScreenState extends State<CityScreen> {
           ),
         ),
 
+        // While a building is selected, a tap anywhere deselects it. The
+        // upgrade popup sits above this barrier and keeps its taps.
+        if (_selectedCell != null)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _deselect,
+            ),
+          ),
+
         // Upgrade popup is in the OUTER stack so its position matches the
         // game's (untransformed, full-screen) coordinates exactly.
         if (_selectedCell != null) _upgradePopup(context),
@@ -331,7 +349,12 @@ class _CityScreenState extends State<CityScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
+          GestureDetector(
+            // absorb taps on the card so only the button acts (and the
+            // surrounding barrier handles deselect)
+            behavior: HitTestBehavior.opaque,
+            onTap: () {},
+            child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: _Chrome.card,
@@ -383,6 +406,7 @@ class _CityScreenState extends State<CityScreen> {
                   ),
                 ),
               ],
+            ),
             ),
           ),
           // little pointer
