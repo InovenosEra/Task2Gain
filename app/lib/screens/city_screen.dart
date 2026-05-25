@@ -690,6 +690,43 @@ class _CityScreenState extends State<CityScreen> {
             ),
           ),
 
+        // Placement indicator: what you're about to place.
+        if (_armedType != null && !_trayOpen)
+          Positioned(
+            left: 14,
+            bottom: 90,
+            child: IgnorePointer(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: _Chrome.card,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: Color(0x33000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(buildingTypeById(_armedType!)?.icon ?? '🏠',
+                        style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Text(
+                        'מציב: ${buildingTypeById(_armedType!)?.displayName ?? ''}',
+                        style: bodyFont(
+                            size: 12,
+                            weight: FontWeight.w800,
+                            color: _Chrome.ink)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
         // Bottom-left: build button (hammer to open, ✕ to cancel).
         Positioned(
           left: 14,
