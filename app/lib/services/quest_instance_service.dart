@@ -145,8 +145,6 @@ class QuestInstanceService {
     final lifetime =
         (wallet['lifetimeEarned'] as Map?)?.cast<String, dynamic>() ??
             <String, dynamic>{'points': 0, 'money': 0};
-    final newLifetimePoints =
-        ((lifetime['points'] as num?)?.toInt() ?? 0) + points;
 
     // Streak.
     final streakMap =
@@ -191,7 +189,7 @@ class QuestInstanceService {
         .map((b) => (b is Map ? b['id'] as String? : null) ?? '')
         .toSet();
     final metrics = BadgeMetrics(
-      lifetimePoints: newLifetimePoints,
+      lifetimePoints: 0, // chores no longer track points; badges use streak/quests
       currentStreak: streakCurrent,
       longestStreak: streakLongest,
       questsCompleted: questsCompleted,
@@ -205,14 +203,16 @@ class QuestInstanceService {
         .toList();
     final updatedBadges = [...existingBadges, ...newlyUnlocked];
 
-    tx.set(earn.walletRef, {
-      'points': FieldValue.increment(points),
-      'tokens': FieldValue.increment(tokensEarned),
+    // New model: the chore's value is play-fuel (tokens), plus any
+    // daily-goal/streak bonus tokens. Chores no longer grant XP (points);
+    // XP comes from building the city.
+    tx.update(earn.walletRef, {
+      'tokens': FieldValue.increment(points + tokensEarned),
       'lifetimeEarned': {
-        'points': newLifetimePoints,
+        'tokens': ((lifetime['tokens'] as num?)?.toInt() ?? 0) + points + tokensEarned,
         'money': (lifetime['money'] as num?)?.toInt() ?? 0,
       },
-    }, SetOptions(merge: true));
+    });
 
     tx.set(earn.userRef, {
       'streak': {

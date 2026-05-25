@@ -103,7 +103,7 @@ void main() {
     final streak = user['streak'] as Map;
     expect(streak['current'], 3); // unchanged, already counted today
     final wallet = (await db.collection('wallets').doc('kid1').get()).data()!;
-    expect(wallet['tokens'], 0); // no goal crossing, no milestone awarded
+    expect(wallet['tokens'], 10); // 10 value, no goal crossing, no milestone awarded
   });
 
   test('milestone token lands when streak reaches day 7 (+3 tokens)', () async {
@@ -122,42 +122,41 @@ void main() {
         .data()!['streak'] as Map;
     expect(streak['current'], 7);
     final wallet = (await db.collection('wallets').doc('kid1').get()).data()!;
-    expect(wallet['tokens'], 3); // day-7 milestone (+3), no goal crossing
+    expect(wallet['tokens'], 13); // 10 value + 3 day-7 milestone, no goal crossing
   });
 
-  test('approve credits points + lifetime, never writes xp/level', () async {
+  test('approve credits tokens (chore value + daily-goal bonus), no XP', () async {
+    // quest value 60 >= daily goal 50 => +1 daily-goal bonus token.
     final id = await service.startQuest(quest: quest(), kidUid: 'kid1');
     await service.submit(id);
     await service.approve(instanceId: id, adminUid: 'parent1');
 
     final wallet = (await db.collection('wallets').doc('kid1').get()).data()!;
-    expect(wallet['points'], 60);
-    expect((wallet['lifetimeEarned'] as Map)['points'], 60);
+    expect(wallet['tokens'], 61); // 60 value + 1 daily-goal bonus
+    expect(wallet['points'], 0);  // chores no longer grant XP
 
     final user = (await db.collection('users').doc('kid1').get()).data()!;
-    expect(user.containsKey('xp'), isFalse);
-    expect(user.containsKey('level'), isFalse);
     expect(user['questsCompleted'], 1);
     expect((user['streak'] as Map)['current'], 1);
   });
 
-  test('crossing the daily goal awards exactly one token', () async {
-    final id = await service.startQuest(quest: quest(points: 60), kidUid: 'kid1');
+  test('chore below daily goal grants only its value in tokens', () async {
+    final id = await service.startQuest(quest: quest(points: 30), kidUid: 'kid1');
     await service.submit(id);
     await service.approve(instanceId: id, adminUid: 'parent1');
     final wallet = (await db.collection('wallets').doc('kid1').get()).data()!;
-    expect(wallet['tokens'], 1); // 60 >= goal 50, daily-goal token
+    expect(wallet['tokens'], 30); // 30 value, 30 < goal 50 so no bonus
+    expect(wallet['points'], 0);
   });
 
-  test('completeAuto credits instantly without submit', () async {
+  test('completeAuto credits tokens instantly without submit', () async {
     final id = await service.completeAuto(
         quest: quest(points: 30, mode: QuestApprovalMode.auto), kidUid: 'kid1');
     final inst = (await db.collection('questInstances').doc(id).get()).data()!;
     expect(inst['status'], 'approved');
-    expect(inst['pointsAwarded'], 30);
     final wallet = (await db.collection('wallets').doc('kid1').get()).data()!;
-    expect(wallet['points'], 30);
-    expect(wallet['tokens'], 0); // 30 < goal 50, no daily-goal token yet
+    expect(wallet['tokens'], 30); // 30 value, below goal so no bonus
+    expect(wallet['points'], 0);
   });
 
   test('first quest unlocks first_quest badge, not any level badge', () async {
