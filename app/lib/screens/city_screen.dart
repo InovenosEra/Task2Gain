@@ -13,6 +13,7 @@ import '../models/quest_instance.dart';
 import '../services/city_service.dart';
 import '../services/quest_instance_service.dart';
 import '../theme/app_theme.dart';
+import '../util/format.dart';
 import '../widgets/scale_tap.dart';
 import '../widgets/screen_background.dart';
 import 'admin_screen.dart';
@@ -960,7 +961,7 @@ class _CurrencyChip extends StatelessWidget {
                   duration: const Duration(milliseconds: 450),
                   curve: Curves.easeOut,
                   builder: (_, v, _) => Text(
-                    v.round().toString(),
+                    formatCount(v.round()),
                     style: displayFont(
                         size: 17, weight: FontWeight.w900, color: _Chrome.ink),
                   ),
