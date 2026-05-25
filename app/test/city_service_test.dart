@@ -57,4 +57,27 @@ void main() {
       throwsA(isA<StateError>()),
     );
   });
+
+  test('upgradeBuilding raises level, charges rising cost, credits XP', () async {
+    await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
+    // After place: tokens 90, points 8, house level 1.
+    await service.upgradeBuilding(uid: 'kid1', gridX: 0, gridY: 0);
+    // Upgrade to level 2 costs 10*2=20, awards 8*2=16 XP.
+
+    final w = (await db.collection('wallets').doc('kid1').get()).data()!;
+    expect(w['tokens'], 70); // 90 - 20
+    expect(w['points'], 24); // 8 + 16
+
+    final c = City.fromDoc(
+        'kid1', (await db.collection('cities').doc('kid1').get()).data());
+    expect(c.buildings.single.level, 2);
+    expect(c.cityValue, 20); // house at level 2 => value 20
+  });
+
+  test('upgradeBuilding throws when no building at cell', () async {
+    expect(
+      () => service.upgradeBuilding(uid: 'kid1', gridX: 9, gridY: 9),
+      throwsA(isA<StateError>()),
+    );
+  });
 }

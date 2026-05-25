@@ -66,6 +66,56 @@ class CityService {
     });
   }
 
+  /// Upgrades the building at ([gridX],[gridY]) to its next level: charges the
+  /// rising token cost and credits the level's XP.
+  Future<void> upgradeBuilding({
+    required String uid,
+    required int gridX,
+    required int gridY,
+  }) async {
+    await _firestore.runTransaction((tx) async {
+      final citySnap = await tx.get(_cityRef(uid));
+      final walletSnap = await tx.get(_walletRef(uid));
+      if (!walletSnap.exists) throw StateError('ארנק לא נמצא');
+
+      final city = City.fromDoc(uid, citySnap.data());
+      final idx = city.indexAt(gridX, gridY);
+      if (idx < 0) throw StateError('אין מבנה במשבצת הזו');
+
+      final existing = city.buildings[idx];
+      final type = buildingTypeById(existing.typeId);
+      if (type == null) throw StateError('סוג מבנה לא ידוע: ${existing.typeId}');
+
+      final nextLevel = existing.level + 1;
+      final cost = type.tokenCostForLevel(nextLevel);
+      final xp = type.xpRewardForLevel(nextLevel);
+
+      final wallet = walletSnap.data()!;
+      final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
+      if (tokens < cost) throw StateError('אין מספיק טוקנים');
+      final points = (wallet['points'] as num?)?.toInt() ?? 0;
+      final lifetime = (wallet['lifetimeEarned'] as Map?)?.cast<String, dynamic>() ??
+          <String, dynamic>{'points': 0, 'money': 0};
+
+      final buildings = [...city.buildings];
+      buildings[idx] = existing.copyWith(level: nextLevel);
+
+      tx.set(_cityRef(uid), {
+        'uid': uid,
+        'buildings': buildings.map((b) => b.toMap()).toList(),
+      }, SetOptions(merge: true));
+
+      tx.update(_walletRef(uid), {
+        'tokens': tokens - cost,
+        'points': points + xp,
+        'lifetimeEarned': {
+          'points': ((lifetime['points'] as num?)?.toInt() ?? 0) + xp,
+          'money': (lifetime['money'] as num?)?.toInt() ?? 0,
+        },
+      });
+    });
+  }
+
   Stream<City> watchCity(String uid) =>
       _cityRef(uid).snapshots().map((s) => City.fromDoc(uid, s.data()));
 }
