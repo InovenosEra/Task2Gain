@@ -24,6 +24,12 @@ class CityGame extends FlameGame with TapCallbacks {
 
   List<PlacedBuilding> _buildings = const [];
 
+  /// When true (build tray open), empty tiles get a pulsing highlight.
+  bool _buildMode = false;
+  double _pulse = 0;
+
+  void setBuildMode(bool v) => _buildMode = v;
+
   /// Sprites keyed by building type id, loaded from `assets/city/<id>.png`.
   /// Any type without a sprite falls back to the canvas-drawn art below, so
   /// a partial art set still runs.
@@ -148,6 +154,7 @@ class CityGame extends FlameGame with TapCallbacks {
       cl.x += cl.speed * dt;
       if (cl.x - 70 * cl.scale > size.x) cl.x = -70 * cl.scale;
     }
+    _pulse += dt;
   }
 
   @override
@@ -185,8 +192,27 @@ class CityGame extends FlameGame with TapCallbacks {
     _drawIsland(canvas);
     _drawGround(canvas);
 
-    // Painter's algorithm: buildings + ambient scenery, far tiles first.
     final occupied = {for (final b in _buildings) '${b.gridX}_${b.gridY}'};
+
+    // Build mode: pulse-highlight the empty, buildable tiles.
+    if (_buildMode) {
+      final a = (0.12 + 0.06 * sin(_pulse * 3.2)).clamp(0.0, 1.0);
+      final fill = Paint()..color = const Color(0xFFFFD166).withValues(alpha: a);
+      final border = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = const Color(0xFFFFA94D).withValues(alpha: a + 0.2);
+      for (var x = 0; x < gridSize; x++) {
+        for (var y = 0; y < gridSize; y++) {
+          if (occupied.contains('${x}_$y')) continue;
+          final path = _tilePath(x.toDouble(), y.toDouble(), x + 1.0, y + 1.0);
+          canvas.drawPath(path, fill);
+          canvas.drawPath(path, border);
+        }
+      }
+    }
+
+    // Painter's algorithm: buildings + ambient scenery, far tiles first.
     final items = <_Drawable>[
       for (final b in _buildings)
         _Drawable(b.gridX, b.gridY, () => _drawBuilding(canvas, b)),

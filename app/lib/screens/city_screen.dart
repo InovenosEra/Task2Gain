@@ -282,7 +282,10 @@ class _CityScreenState extends State<CityScreen> {
             offset: Offset.zero,
             child: _BuildButton(
               active: _buildMode,
-              onTap: () => setState(() => _buildMode = !_buildMode),
+              onTap: () => setState(() {
+                _buildMode = !_buildMode;
+                _game.setBuildMode(_buildMode);
+              }),
             ),
           ),
         ),
