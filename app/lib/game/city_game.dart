@@ -81,6 +81,12 @@ class CityGame extends FlameGame with TapCallbacks {
         glass: true),
     'cityhall': _Style(
         roof: _Roof.dome, roofColor: Color(0xFFF4D06A), baseH: 30, perLevel: 14),
+    'hospital': _Style(
+        roof: _Roof.flat, roofColor: Color(0xFF4CC9F0), baseH: 30, perLevel: 14),
+    'cafe': _Style(
+        roof: _Roof.flat, roofColor: Color(0xFFE08D5A), baseH: 22, perLevel: 10),
+    'bank': _Style(
+        roof: _Roof.flat, roofColor: Color(0xFFB7AE97), baseH: 32, perLevel: 14),
     'park': _Style(roof: _Roof.none, roofColor: Color(0xFF57C9A0), kind: _Kind.park),
     'decor': _Style(roof: _Roof.none, roofColor: Color(0xFFF4B942), kind: _Kind.decor),
     'road': _Style(roof: _Roof.none, roofColor: Color(0xFFAEB4C0), kind: _Kind.road),
@@ -482,21 +488,38 @@ class CityGame extends FlameGame with TapCallbacks {
       _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 0.40, 0.60,
           0.0, 0.30 * (16 / h).clamp(0.4, 1.0), const Color(0xFF8A5A3B));
 
-      // Shop: a striped awning over the storefront.
-      if (b.typeId == 'shop') {
+      // Shop & café: a striped awning over the storefront.
+      if (b.typeId == 'shop' || b.typeId == 'cafe') {
         final vTop = (0.46 * (16 / h)).clamp(0.18, 0.46);
+        final stripe = b.typeId == 'cafe'
+            ? const Color(0xFF2BB7A3)
+            : const Color(0xFFEF476F);
         for (var k = 0; k < 6; k++) {
-          _facePanel(
-              canvas,
-              c(x1, y1),
-              c(x0, y1),
-              t(x1, y1),
-              t(x0, y1),
-              k / 6,
-              (k + 1) / 6,
-              vTop * 0.62,
-              vTop,
-              k.isEven ? const Color(0xFFEF476F) : const Color(0xFFFFF3EC));
+          _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), k / 6,
+              (k + 1) / 6, vTop * 0.62, vTop,
+              k.isEven ? stripe : const Color(0xFFFFF3EC));
+        }
+        // Café: a parasol out front.
+        if (b.typeId == 'cafe') {
+          _parasol(canvas, _iso(b.gridX + 0.5, b.gridY + 0.92));
+        }
+      }
+
+      // Hospital: a red cross on the front wall.
+      if (b.typeId == 'hospital') {
+        const red = Color(0xFFEF476F);
+        _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 0.44,
+            0.56, 0.45, 0.72, red);
+        _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 0.38,
+            0.62, 0.53, 0.64, red);
+      }
+
+      // Bank: a colonnade of light pilasters across the front.
+      if (b.typeId == 'bank') {
+        for (var k = 0; k < 4; k++) {
+          final u = 0.16 + k * 0.22;
+          _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), u,
+              u + 0.07, 0.0, 0.82, _shade(_wall, 1.15));
         }
       }
     }
@@ -535,6 +558,25 @@ class CityGame extends FlameGame with TapCallbacks {
       if (b.typeId == 'factory') {
         _smokestack(canvas, _iso(x0 + 0.30, y0 + 0.30, h));
         _smokestack(canvas, _iso(x0 + 0.52, y0 + 0.26, h));
+      }
+      // Hospital: a small red cross on the roof.
+      if (b.typeId == 'hospital') {
+        final r = _iso((x0 + x1) / 2, (y0 + y1) / 2, h);
+        const red = Color(0xFFEF476F);
+        canvas.drawRect(
+            Rect.fromCenter(center: r, width: 14, height: 5), Paint()..color = red);
+        canvas.drawRect(
+            Rect.fromCenter(center: r, width: 5, height: 14), Paint()..color = red);
+      }
+      // Bank: a triangular pediment over the front colonnade.
+      if (b.typeId == 'bank') {
+        final apex = _iso((x0 + x1) / 2, y1, h + 12);
+        final ped = Path()
+          ..moveTo(t(x1, y1).dx, t(x1, y1).dy)
+          ..lineTo(t(x0, y1).dx, t(x0, y1).dy)
+          ..lineTo(apex.dx, apex.dy)
+          ..close();
+        canvas.drawPath(ped, Paint()..color = _shade(_wall, 1.18));
       }
       // Skyscraper: a thin rooftop antenna.
       if (style.glass) {
@@ -660,6 +702,28 @@ class CityGame extends FlameGame with TapCallbacks {
       Rect.fromLTWH(base.dx - w / 2, base.dy - hgt + 3, w, 3),
       Paint()..color = const Color(0xFFEF476F),
     );
+  }
+
+  /// A café parasol (table umbrella) standing on the ground at [base].
+  void _parasol(Canvas canvas, Offset base) {
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(base.dx, base.dy + 1), width: 14, height: 5),
+      Paint()..color = const Color(0x22000000),
+    );
+    // pole
+    canvas.drawLine(base, Offset(base.dx, base.dy - 20),
+        Paint()..color = const Color(0xFF8A8F9C)..strokeWidth = 2);
+    // canopy (scalloped — two arcs)
+    final canopy = Rect.fromCenter(
+        center: Offset(base.dx, base.dy - 20), width: 26, height: 14);
+    canvas.drawArc(canopy, pi, pi, true, Paint()..color = const Color(0xFFEF476F));
+    canvas.drawArc(
+        Rect.fromCenter(
+            center: Offset(base.dx - 6, base.dy - 20), width: 14, height: 12),
+        pi,
+        pi,
+        true,
+        Paint()..color = const Color(0xFFFF6F9C));
   }
 
   /// A golden dome (with highlight + finial) centred on a building roof.
