@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../game/economy_config.dart';
 
 class WalletService {
   WalletService({FirebaseFirestore? firestore})
@@ -78,6 +79,61 @@ class WalletService {
       return shekels;
     });
     return result;
+  }
+
+  /// Trades XP (the `points` field) for tokens at the deliberately-lossy
+  /// [kXpToTokenRate], capped at [kXpToTokenDailyCap] tokens per UTC day.
+  /// Returns the number of tokens credited. This is the loop guard that keeps
+  /// chores necessary. Uses absolute writes so it is testable.
+  Future<int> convertXpToTokens({
+    required String userUid,
+    required int xpToSpend,
+  }) async {
+    if (xpToSpend <= 0) throw StateError('יש להמיר כמות חיובית של XP');
+    final tokensOut = tokensFromXp(xpToSpend);
+    if (tokensOut <= 0) throw StateError('כמות קטנה מדי להמרה');
+    if (tokensOut > kXpToTokenDailyCap) {
+      throw StateError('המקסימום היומי הוא $kXpToTokenDailyCap טוקנים');
+    }
+
+    final walletRef = _firestore.collection('wallets').doc(userUid);
+    final userRef = _firestore.collection('users').doc(userUid);
+    final today = _utcDayKey(DateTime.now());
+
+    return _firestore.runTransaction<int>((tx) async {
+      final walletSnap = await tx.get(walletRef);
+      final userSnap = await tx.get(userRef);
+      if (!walletSnap.exists) throw StateError('ארנק לא נמצא');
+      final wallet = walletSnap.data()!;
+      final points = (wallet['points'] as num?)?.toInt() ?? 0;
+      final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
+      if (xpToSpend > points) throw StateError('אין מספיק XP');
+
+      // Daily cap (resets when the UTC date rolls over).
+      final capMap = (userSnap.data()?['xpToTokenToday'] as Map?)
+              ?.cast<String, dynamic>() ??
+          const {};
+      final usedToday =
+          capMap['date'] == today ? (capMap['tokens'] as num?)?.toInt() ?? 0 : 0;
+      if (usedToday + tokensOut > kXpToTokenDailyCap) {
+        throw StateError('חרגת מהמכסה היומית להמרה');
+      }
+
+      tx.update(walletRef, {
+        'points': points - xpToSpend,
+        'tokens': tokens + tokensOut,
+      });
+      tx.set(userRef, {
+        'xpToTokenToday': {'date': today, 'tokens': usedToday + tokensOut},
+      }, SetOptions(merge: true));
+
+      return tokensOut;
+    });
+  }
+
+  static String _utcDayKey(DateTime t) {
+    final u = t.toUtc();
+    return '${u.year.toString().padLeft(4, '0')}-${u.month.toString().padLeft(2, '0')}-${u.day.toString().padLeft(2, '0')}';
   }
 
   /// Kid requests a CashCash transfer (or any external money transfer). Parent
