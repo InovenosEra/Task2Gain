@@ -960,7 +960,17 @@ class _SubScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                Expanded(child: child),
+                // The tab screens were designed portrait. In the landscape
+                // frame, centre them in a phone-width column so they read as
+                // intentional instead of stretching edge to edge.
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: child,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
