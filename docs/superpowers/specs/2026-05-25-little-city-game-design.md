@@ -12,7 +12,11 @@ A worldwide, all-ages **isometric city-builder** (Clash-of-Clans-style art). Pla
 
 The game is the destination; chores are the fuel that keeps it running. This is the opposite of the current app, where tasks were the point and games were decoration.
 
-**One-line product:** *Build your city with tokens, earn tokens by doing chores, win real prizes by leveling up your city.*
+**One-line product:** *Do chores to earn tokens → spend tokens building your city → earn XP from playing → cash XP out for real prizes or money.*
+
+**Two currencies:**
+- **Tokens** — the *spendable* play-fuel. You spend them to build/play. Earned by doing chores (and, at a poor rate, by converting XP back).
+- **XP** — the *accumulating* winnings. Earned by playing/building. Convertible into tokens (lossy/capped), prizes, or money. The city itself grows **permanently** and is never consumed by cashing out XP.
 
 ---
 
@@ -67,14 +71,17 @@ Every part of the UI serves this loop: the city (where tokens are spent), the to
 - The city visibly fills in and levels up with effort — the core sense of progress.
 
 **Win mechanic — effort + surprise (deliberately not gambling):**
-- **Steady progress:** building reliably increases city level. Effort always pays off.
-- **Surprise delights** layered on top: occasional **bonus-token drops**, visiting characters, and **mystery crates earned by progress milestones** (NOT paid random pulls). Surprise adds joy; it never gates rewards behind luck and never has real money riding on chance.
+- **Building earns XP.** Spending tokens to build/upgrade grows the city permanently **and** drops XP into your separate winnings balance. Effort always pays off.
+- **XP is the payoff currency:** cash it out for real prizes or money (parent-funded), or trade it back into tokens at a poor rate to keep playing.
+- **Surprise delights** layered on top: occasional **bonus-token/XP drops**, visiting characters, and **mystery crates earned by progress milestones** (NOT paid random pulls). Surprise adds joy; it never gates rewards behind luck and never has real money riding on chance.
 
 **Scalability across ages:** a young child places one house and watches it light up; an older child optimizes layout, upgrade order, and city-value growth. Same game, deep ceiling.
 
 ---
 
-## 6. Economy (default values — all tunable)
+## 6. Economy — two currencies (default values, all tunable)
+
+**Tokens (spend to play) — earned by chores**
 
 | Item | Default | Notes |
 |---|---|---|
@@ -84,13 +91,22 @@ Every part of the UI serves this loop: the city (where tokens are spent), the to
 | Decoration | ~2 tokens | |
 | Upgrade building | ~8 tokens | Rising cost per level. |
 | Chore token value | **5–20 tokens** | Set per-chore by the admin. |
-| Prize | parent-loaded | Real reward (movie night, toy, money). |
-| Prize unlock condition | **a city milestone** | e.g. "reach City Level 10". |
 
-**Token flow:**
-1. Player spends tokens building → city level rises.
+**XP (winnings) — earned by playing**
+
+| Item | Default | Notes |
+|---|---|---|
+| XP per build/upgrade | scales with cost | Bigger builds → more XP. |
+| Bonus XP chores | occasional | Some chores also grant a little XP, set by admin. |
+| XP → prize / money | generous rate | The intended payoff path; parent-funded. |
+| XP → tokens | **lossy and/or daily-capped** | Allowed, but deliberately poor — see loop guard below. |
+
+**The loop & its guard:**
+1. Player spends **tokens** building → city grows permanently → player earns **XP**.
 2. Tokens run low → player completes a chore → **admin approves** → tokens credited.
-3. City reaches the milestone attached to a loaded prize → **prize unlocks** → admin fulfills it in real life and marks it delivered.
+3. Player cashes **XP** out for a prize or money (parent-funded), via the existing convert/shop flow.
+
+> **Loop guard (must be deliberate):** XP→tokens conversion is intentionally **lossy and/or daily-capped** so playing alone always slowly bleeds tokens. This keeps chores necessary and prevents a closed perpetual-play loop. XP→prize/money stays the generous path.
 
 ---
 
@@ -106,10 +122,11 @@ Every part of the UI serves this loop: the city (where tokens are spent), the to
 - The rest of the app (auth, chores, parent screens, navigation) stays in standard Flutter widgets; the City screen hosts a Flame `GameWidget`.
 
 **Data model extensions (Firestore):**
-- **Tokens:** a `tokens` balance on the player's wallet (the play-fuel currency). Chores credit it; building debits it.
-- **City state:** `cities/{uid}` document — `cityLevel`, `cityValue`, and a list of placed buildings (`{type, gridX, gridY, level}`). Embedded list is fine at MVP scale.
-- **Building catalog:** app-side config/constants (`type → cost, city-value, sprite, footprint`) — not Firestore at MVP.
-- **Prizes & milestones:** extend `rewards` with a `milestone` (e.g. `requiredCityLevel`) and an unlock/claim state. Reaching the milestone flips it to "unlocked"; admin marks "delivered."
+- **Tokens (new):** a `tokens` balance on the player's wallet — the play-fuel. Chores credit it; building debits it; lossy/capped XP→tokens conversion credits it.
+- **XP (reuse existing `points`):** repurpose the wallet's existing `points` field as **XP** — earned by building, convertible to tokens (lossy/capped), money (existing convert-to-money flow), or prizes (existing `rewards` shop). Minimal new machinery.
+- **City state (new):** `cities/{uid}` document — permanent `cityLevel` / `cityValue` and a list of placed buildings (`{type, gridX, gridY, level}`). **Independent of XP** — cashing out XP never shrinks the city. Embedded list is fine at MVP scale.
+- **Building catalog:** app-side config/constants (`type → tokenCost, xpReward, sprite, footprint`) — not Firestore at MVP.
+- **Prizes:** reuse the existing `rewards` catalog + convert-to-money flow; prizes are **redeemed with XP**. (Optional later: bonus prizes tied to a city-level milestone.)
 
 **Sync model:** city state and token balance persist in Firestore so progress survives across devices and the parent can see it. Building actions write through to Firestore; Flame renders local state optimistically.
 
@@ -155,7 +172,7 @@ Every part of the UI serves this loop: the city (where tokens are spent), the to
 
 ## 11. Open Questions (for planning / later)
 
-- Exact city-level curve and prize-milestone pacing (tune during implementation).
-- Whether to keep the existing `points` concept or fully replace it with `tokens`.
+- Exact city-level curve, XP-per-build curve, and XP→prize/money pacing (tune during implementation).
+- The XP→tokens conversion rate and daily cap (the loop guard) — needs play-testing.
 - Building catalog final list and upgrade trees.
 - Onboarding flow for the new game-first experience (replaces the current welcome screen).
