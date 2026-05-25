@@ -71,6 +71,8 @@ class CityGame extends FlameGame with TapCallbacks {
         baseH: 64,
         perLevel: 28,
         glass: true),
+    'cityhall': _Style(
+        roof: _Roof.dome, roofColor: Color(0xFFF4D06A), baseH: 30, perLevel: 14),
     'park': _Style(roof: _Roof.none, roofColor: Color(0xFF57C9A0), kind: _Kind.park),
     'decor': _Style(roof: _Roof.none, roofColor: Color(0xFFF4B942), kind: _Kind.decor),
     'road': _Style(roof: _Roof.none, roofColor: Color(0xFFAEB4C0), kind: _Kind.road),
@@ -371,6 +373,10 @@ class CityGame extends FlameGame with TapCallbacks {
       } else if (b.typeId == 'school') {
         _flag(canvas, apex);
       }
+    } else if (style.roof == _Roof.dome) {
+      // Civic landmark: flat cream roof with a golden dome + finial.
+      _face(canvas, rim, _shade(_wall, 1.05));
+      _dome(canvas, (x0 + x1) / 2, (y0 + y1) / 2, h, roofC);
     } else {
       _face(canvas, rim, _shade(roofC, 1.06));
       // a slim parapet lip for depth
@@ -402,8 +408,10 @@ class CityGame extends FlameGame with TapCallbacks {
     }
 
     if (b.level > 1) {
+      // Lift the badge clear of the dome so it doesn't sit on the cupola.
+      final badgeLift = style.roof == _Roof.dome ? tileW * 0.5 / 2 + 16 : 6.0;
       final top = _iso(b.gridX + 0.5, b.gridY + 0.5, h);
-      _drawLevelBadge(canvas, Offset(top.dx, top.dy - 6), b.level);
+      _drawLevelBadge(canvas, Offset(top.dx, top.dy - badgeLift), b.level);
     }
   }
 
@@ -507,6 +515,25 @@ class CityGame extends FlameGame with TapCallbacks {
       Rect.fromLTWH(base.dx - w / 2, base.dy - hgt + 3, w, 3),
       Paint()..color = const Color(0xFFEF476F),
     );
+  }
+
+  /// A golden dome (with highlight + finial) centred on a building roof.
+  void _dome(Canvas canvas, double cx, double cy, double h, Color color) {
+    final center = _iso(cx, cy, h);
+    final dw = tileW * 0.62, dh = tileW * 0.5;
+    final rect = Rect.fromCenter(center: center, width: dw, height: dh);
+    // top half-ellipse (chord closes the flat bottom)
+    canvas.drawArc(rect, 0, -pi, false, Paint()..color = color);
+    final hl = Rect.fromCenter(
+        center: Offset(center.dx - 3, center.dy - 2),
+        width: dw * 0.5,
+        height: dh * 0.5);
+    canvas.drawArc(hl, 0, -pi, false, Paint()..color = _shade(color, 1.18));
+    final top = Offset(center.dx, center.dy - dh / 2);
+    canvas.drawLine(top, Offset(top.dx, top.dy - 8),
+        Paint()..color = _shade(color, 0.7)..strokeWidth = 2);
+    canvas.drawCircle(
+        Offset(top.dx, top.dy - 9), 3, Paint()..color = _shade(color, 1.1));
   }
 
   /// A little pennant flag at a roof apex.
@@ -800,7 +827,7 @@ class CityGame extends FlameGame with TapCallbacks {
   }
 }
 
-enum _Roof { pyramid, flat, none }
+enum _Roof { pyramid, flat, dome, none }
 
 enum _Kind { building, road, park, decor }
 

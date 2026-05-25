@@ -34,6 +34,7 @@ const List<BuildingType> kBuildingCatalog = [
   BuildingType(id: 'factory',   displayName: 'מפעל',    icon: '🏭', baseTokenCost: 30, baseXpReward: 26),
   BuildingType(id: 'apartment', displayName: 'בניין',   icon: '🏢', baseTokenCost: 25, baseXpReward: 22),
   BuildingType(id: 'tower',     displayName: 'מגדל',     icon: '🏙️', baseTokenCost: 45, baseXpReward: 40),
+  BuildingType(id: 'cityhall',  displayName: 'עירייה',   icon: '🏛️', baseTokenCost: 35, baseXpReward: 30),
   BuildingType(id: 'decor',     displayName: 'קישוט',   icon: '🗿', baseTokenCost: 4,  baseXpReward: 2),
   BuildingType(id: 'road',      displayName: 'כביש',    icon: '🛣️', baseTokenCost: 2,  baseXpReward: 1),
 ];
