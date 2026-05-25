@@ -24,11 +24,43 @@ class CityGame extends FlameGame with TapCallbacks {
 
   List<PlacedBuilding> _buildings = const [];
 
-  /// When true (build tray open), empty tiles get a pulsing highlight.
+  /// When true (placement armed), empty tiles get a pulsing highlight.
   bool _buildMode = false;
   double _pulse = 0;
 
   void setBuildMode(bool v) => _buildMode = v;
+
+  /// The currently selected building cell (shows a ring + drives the upgrade
+  /// popup in the screen layer). Null when nothing is selected.
+  int? _selX;
+  int? _selY;
+
+  void setSelected(int? gx, int? gy) {
+    _selX = gx;
+    _selY = gy;
+  }
+
+  /// Screen-space point above the building at ([gx],[gy]) — where the screen
+  /// layer anchors the upgrade popup. The GameWidget is full-screen and the
+  /// canvas is untransformed, so these are screen pixels.
+  Offset anchorAbove(int gx, int gy) {
+    PlacedBuilding? b;
+    for (final x in _buildings) {
+      if (x.gridX == gx && x.gridY == gy) {
+        b = x;
+        break;
+      }
+    }
+    var lift = 34.0;
+    if (b != null) {
+      final style = _styles[b.typeId];
+      if (style != null && style.kind == _Kind.building) {
+        final h = style.baseH + (b.level - 1) * style.perLevel;
+        lift = h + (style.roof == _Roof.pyramid ? h * 0.5 + 22 : 16);
+      }
+    }
+    return _iso(gx + 0.5, gy + 0.5, lift);
+  }
 
   /// Sprites keyed by building type id, loaded from `assets/city/<id>.png`.
   /// Any type without a sprite falls back to the canvas-drawn art below, so
@@ -261,6 +293,20 @@ class CityGame extends FlameGame with TapCallbacks {
       }
     }
 
+    // Selected building: a pulsing ring on its tile.
+    if (_selX != null && _selY != null) {
+      final ring = _tilePath(
+          _selX!.toDouble(), _selY!.toDouble(), _selX! + 1.0, _selY! + 1.0);
+      final a = (0.6 + 0.4 * sin(_pulse * 4)).clamp(0.0, 1.0);
+      canvas.drawPath(
+        ring,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = const Color(0xFFFFD166).withValues(alpha: a),
+      );
+    }
+
     // Painter's algorithm: buildings + ambient scenery, far tiles first.
     final items = <_Drawable>[
       for (final b in _buildings)
@@ -480,10 +526,6 @@ class CityGame extends FlameGame with TapCallbacks {
       size: size,
       anchor: Anchor.bottomCenter,
     );
-    if (b.level > 1) {
-      _drawLevelBadge(
-          canvas, Offset(contact.dx, contact.dy - w * 0.6), b.level);
-    }
   }
 
   /// A walled building with windows and a pyramid or flat roof.
@@ -639,12 +681,6 @@ class CityGame extends FlameGame with TapCallbacks {
       }
     }
 
-    if (b.level > 1) {
-      // Lift the badge clear of the dome so it doesn't sit on the cupola.
-      final badgeLift = style.roof == _Roof.dome ? tileW * 0.5 / 2 + 16 : 6.0;
-      final top = _iso(b.gridX + 0.5, b.gridY + 0.5, h);
-      _drawLevelBadge(canvas, Offset(top.dx, top.dy - badgeLift), b.level);
-    }
   }
 
   /// Fills a sub-rectangle of a wall face (params in face-local u/v, where
@@ -1141,29 +1177,6 @@ class CityGame extends FlameGame with TapCallbacks {
       ..addText(f.text);
     final p = builder.build()..layout(const ParagraphConstraints(width: 140));
     canvas.drawParagraph(p, Offset(f.pos.dx - 70, f.pos.dy));
-  }
-
-  void _drawLevelBadge(Canvas canvas, Offset center, int level) {
-    canvas.drawCircle(center, 11, Paint()..color = const Color(0xFF1E2233));
-    canvas.drawCircle(
-      center,
-      11,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = const Color(0xFFFFD24A),
-    );
-    final builder = ParagraphBuilder(ParagraphStyle(
-      textAlign: TextAlign.center,
-      fontSize: 12,
-      fontWeight: FontWeight.w900,
-    ))
-      ..pushStyle(TextStyle(color: const Color(0xFFFFFFFF)))
-      ..addText('$level');
-    final paragraph = builder.build()
-      ..layout(const ParagraphConstraints(width: 22));
-    canvas.drawParagraph(
-        paragraph, Offset(center.dx - 11, center.dy - paragraph.height / 2));
   }
 
   void _face(Canvas canvas, List<Offset> pts, Color color) {

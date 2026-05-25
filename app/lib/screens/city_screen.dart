@@ -56,7 +56,9 @@ class _CityScreenState extends State<CityScreen> {
   StreamSubscription<City>? _citySub;
   City _city = const City(uid: '', buildings: []);
   String _selectedType = 'house';
-  bool _buildMode = false;
+  bool _trayOpen = false; // building menu visible
+  String? _armedType; // a type armed for placement (tap a tile to place)
+  ({int x, int y})? _selectedCell; // a building selected for upgrade
   int _lastCityLevel = -1;
   int? _levelUpBanner;
   Timer? _levelUpTimer;
@@ -70,6 +72,12 @@ class _CityScreenState extends State<CityScreen> {
     _citySub = _cityService.watchCity(widget.data.uid).listen((city) {
       _city = city;
       _game.setBuildings(city.buildings);
+      // If the selected building vanished (e.g. data change), clear it.
+      if (_selectedCell != null &&
+          !city.isOccupied(_selectedCell!.x, _selectedCell!.y)) {
+        _selectedCell = null;
+        _game.setSelected(null, null);
+      }
       // Celebrate when the city reaches a new level.
       final level = city.cityLevel;
       if (_lastCityLevel >= 0 && level > _lastCityLevel) {
@@ -92,17 +100,34 @@ class _CityScreenState extends State<CityScreen> {
     super.dispose();
   }
 
-  Future<void> _onCellTapped(int gx, int gy) async {
-    final isUpgrade = _city.isOccupied(gx, gy);
+  void _onCellTapped(int gx, int gy) {
+    if (_city.isOccupied(gx, gy)) {
+      // Tapping a building selects it (toggle) — the upgrade popup appears
+      // above it. Selecting clears any armed placement.
+      final already = _selectedCell?.x == gx && _selectedCell?.y == gy;
+      setState(() {
+        _selectedCell = already ? null : (x: gx, y: gy);
+        _armedType = null;
+        _game.setBuildMode(false);
+        _game.setSelected(_selectedCell?.x, _selectedCell?.y);
+      });
+      return;
+    }
+    // Empty tile: place the armed building, or clear the selection.
+    if (_armedType != null) {
+      _place(_armedType!, gx, gy);
+    } else if (_selectedCell != null) {
+      setState(() {
+        _selectedCell = null;
+        _game.setSelected(null, null);
+      });
+    }
+  }
+
+  Future<void> _place(String typeId, int gx, int gy) async {
     try {
-      final result = isUpgrade
-          ? await _cityService.upgradeBuilding(
-              uid: widget.data.uid, gridX: gx, gridY: gy)
-          : await _cityService.placeBuilding(
-              uid: widget.data.uid,
-              typeId: _selectedType,
-              gridX: gx,
-              gridY: gy);
+      final result = await _cityService.placeBuilding(
+          uid: widget.data.uid, typeId: typeId, gridX: gx, gridY: gy);
       _game.celebrate(gx, gy,
           xpGained: result.xpGained, bonusTokens: result.bonusTokens);
     } on StateError catch (e) {
@@ -110,6 +135,52 @@ class _CityScreenState extends State<CityScreen> {
     } catch (e) {
       _toast('שגיאה: $e');
     }
+  }
+
+  Future<void> _upgradeSelected() async {
+    final cell = _selectedCell;
+    if (cell == null) return;
+    try {
+      final result = await _cityService.upgradeBuilding(
+          uid: widget.data.uid, gridX: cell.x, gridY: cell.y);
+      _game.celebrate(cell.x, cell.y,
+          xpGained: result.xpGained, bonusTokens: result.bonusTokens);
+    } on StateError catch (e) {
+      _toast(e.message);
+    } catch (e) {
+      _toast('שגיאה: $e');
+    }
+  }
+
+  void _toggleTray() {
+    setState(() {
+      if (_trayOpen || _armedType != null) {
+        // Cancel everything.
+        _trayOpen = false;
+        _armedType = null;
+        _game.setBuildMode(false);
+      } else {
+        _trayOpen = true;
+        _selectedCell = null;
+        _game.setSelected(null, null);
+      }
+    });
+  }
+
+  void _armType(String id) {
+    setState(() {
+      _selectedType = id;
+      _armedType = id;
+      _trayOpen = false;
+      _selectedCell = null;
+      _game.setSelected(null, null);
+      _game.setBuildMode(true);
+    });
+  }
+
+  void _closeTray() {
+    if (!_trayOpen) return;
+    setState(() => _trayOpen = false);
   }
 
   void _toast(String msg) {
@@ -235,7 +306,89 @@ class _CityScreenState extends State<CityScreen> {
             ),
           ),
         ),
+
+        // Upgrade popup is in the OUTER stack so its position matches the
+        // game's (untransformed, full-screen) coordinates exactly.
+        if (_selectedCell != null) _upgradePopup(context),
       ],
+    );
+  }
+
+  /// A small popup above the selected building: its level + an upgrade button.
+  Widget _upgradePopup(BuildContext context) {
+    final cell = _selectedCell!;
+    final idx = _city.indexAt(cell.x, cell.y);
+    if (idx < 0) return const SizedBox.shrink();
+    final b = _city.buildings[idx];
+    final type = buildingTypeById(b.typeId);
+    final nextCost = type?.tokenCostForLevel(b.level + 1) ?? 0;
+    final anchor = _game.anchorAbove(cell.x, cell.y);
+    const w = 150.0;
+    return Positioned(
+      left: anchor.dx - w / 2,
+      top: anchor.dy - 78,
+      width: w,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: _Chrome.card,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 12,
+                    offset: Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${type?.displayName ?? ''} · רמה ${b.level}',
+                    style: displayFont(
+                        size: 13,
+                        weight: FontWeight.w900,
+                        color: _Chrome.ink)),
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: _upgradeSelected,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [AppPalette.gold, AppPalette.goldDeep]),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('שדרוג',
+                            style: displayFont(
+                                size: 13,
+                                weight: FontWeight.w900,
+                                color: Colors.white)),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.bolt_rounded,
+                            size: 14, color: Colors.white),
+                        Text('$nextCost',
+                            style: displayFont(
+                                size: 13,
+                                weight: FontWeight.w900,
+                                color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // little pointer
+          CustomPaint(size: const Size(16, 8), painter: _DownTriangle()),
+        ],
+      ),
     );
   }
 
@@ -290,7 +443,7 @@ class _CityScreenState extends State<CityScreen> {
           ),
 
         // Empty-state onboarding: nudge brand-new cities toward building.
-        if (_city.buildings.isEmpty && !_buildMode)
+        if (_city.buildings.isEmpty && _armedType == null && !_trayOpen)
           Positioned(
             left: 0,
             right: 0,
@@ -368,25 +521,32 @@ class _CityScreenState extends State<CityScreen> {
           ),
         ),
 
-        // Bottom-left: build button.
+        // Dismiss barrier: while the tray is open, a tap anywhere closes it
+        // (the tray + build button below sit above this and keep their taps).
+        if (_trayOpen)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _closeTray,
+            ),
+          ),
+
+        // Bottom-left: build button (hammer to open, ✕ to cancel).
         Positioned(
           left: 14,
-          bottom: _buildMode ? 132 : 18,
+          bottom: _trayOpen ? 132 : 18,
           child: AnimatedSlide(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOutBack,
             offset: Offset.zero,
             child: _BuildButton(
-              active: _buildMode,
-              onTap: () => setState(() {
-                _buildMode = !_buildMode;
-                _game.setBuildMode(_buildMode);
-              }),
+              active: _trayOpen || _armedType != null,
+              onTap: _toggleTray,
             ),
           ),
         ),
 
-        // Bottom: building tray (slides up when build mode is on).
+        // Bottom: building tray (slides up when open).
         Positioned(
           left: 0,
           right: 0,
@@ -398,11 +558,11 @@ class _CityScreenState extends State<CityScreen> {
                   .animate(anim),
               child: child,
             ),
-            child: _buildMode
+            child: _trayOpen
                 ? _BuildTray(
                     key: const ValueKey('tray'),
                     selected: _selectedType,
-                    onSelect: (id) => setState(() => _selectedType = id),
+                    onSelect: _armType,
                   )
                 : const SizedBox.shrink(key: ValueKey('no-tray')),
           ),
@@ -410,6 +570,22 @@ class _CityScreenState extends State<CityScreen> {
       ],
     );
   }
+}
+
+/// Small downward triangle pointer under the upgrade popup.
+class _DownTriangle extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, Paint()..color = _Chrome.card);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ----------------------------------------------------------------------------
