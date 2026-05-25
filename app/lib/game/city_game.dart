@@ -298,6 +298,10 @@ class CityGame extends FlameGame with TapCallbacks {
     _windows(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 2, rows,
         _glass);
 
+    // Door on the front-right face, ground-level centre.
+    _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1),
+        0.40, 0.60, 0.0, 0.30 * (16 / h).clamp(0.4, 1.0), const Color(0xFF8A5A3B));
+
     // Roof.
     final rim = [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)];
     if (style.roof == _Roof.pyramid) {
@@ -309,6 +313,12 @@ class CityGame extends FlameGame with TapCallbacks {
       _face(canvas, [rim[1], rim[2], apex], _shade(style.roofColor, 0.74));
       _face(canvas, [rim[2], rim[3], apex], _shade(style.roofColor, 0.94));
       _face(canvas, [rim[3], rim[0], apex], _shade(style.roofColor, 1.04));
+      // House gets a chimney; school gets a rooftop flag.
+      if (b.typeId == 'house') {
+        _chimney(canvas, x1 - 0.30, y0 + 0.16, h);
+      } else if (b.typeId == 'school') {
+        _flag(canvas, apex);
+      }
     } else {
       _face(canvas, rim, _shade(style.roofColor, 1.06));
       // a slim parapet lip for depth
@@ -326,6 +336,50 @@ class CityGame extends FlameGame with TapCallbacks {
       final top = _iso(b.gridX + 0.5, b.gridY + 0.5, h);
       _drawLevelBadge(canvas, Offset(top.dx, top.dy - 6), b.level);
     }
+  }
+
+  /// Fills a sub-rectangle of a wall face (params in face-local u/v, where
+  /// base A→B is u and base→top is v). Used for doors.
+  void _facePanel(Canvas canvas, Offset baseA, Offset baseB, Offset topA,
+      Offset topB, double u0, double u1, double v0, double v1, Color color) {
+    Offset at(double u, double v) => Offset.lerp(
+        Offset.lerp(baseA, baseB, u)!, Offset.lerp(topA, topB, u)!, v)!;
+    final path = Path()
+      ..moveTo(at(u0, v0).dx, at(u0, v0).dy)
+      ..lineTo(at(u1, v0).dx, at(u1, v0).dy)
+      ..lineTo(at(u1, v1).dx, at(u1, v1).dy)
+      ..lineTo(at(u0, v1).dx, at(u0, v1).dy)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  /// A small brick chimney sitting on the roof at grid ([gx],[gy]), rising
+  /// from wall-top height [baseH].
+  void _chimney(Canvas canvas, double gx, double gy, double baseH) {
+    const w = 0.14, hgt = 14.0;
+    final x0 = gx, x1 = gx + w, y0 = gy, y1 = gy + w;
+    Offset b(num px, num py) => _iso(px, py, baseH);
+    Offset t(num px, num py) => _iso(px, py, baseH + hgt);
+    const brick = Color(0xFFB1674A);
+    _face(canvas, [b(x1, y0), b(x1, y1), t(x1, y1), t(x1, y0)],
+        _shade(brick, 0.7));
+    _face(canvas, [b(x1, y1), b(x0, y1), t(x0, y1), t(x1, y1)],
+        _shade(brick, 0.85));
+    _face(canvas, [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)],
+        _shade(brick, 1.1));
+  }
+
+  /// A little pennant flag at a roof apex.
+  void _flag(Canvas canvas, Offset apex) {
+    final poleTop = Offset(apex.dx, apex.dy - 20);
+    canvas.drawLine(apex, poleTop,
+        Paint()..color = const Color(0xFF6B7280)..strokeWidth = 2);
+    final flag = Path()
+      ..moveTo(poleTop.dx, poleTop.dy)
+      ..lineTo(poleTop.dx + 16, poleTop.dy + 5)
+      ..lineTo(poleTop.dx, poleTop.dy + 10)
+      ..close();
+    canvas.drawPath(flag, Paint()..color = const Color(0xFFEF476F));
   }
 
   /// A flat asphalt tile with a dashed centerline.
