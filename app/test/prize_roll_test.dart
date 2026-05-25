@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:task2gain/models/prize.dart';
+import 'package:task2play/models/prize.dart';
 
 void main() {
   group('wheel no-loss invariant', () {

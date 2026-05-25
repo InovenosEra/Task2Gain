@@ -9,11 +9,11 @@ import 'theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const Task2GainApp());
+  runApp(const Task2PlayApp());
 }
 
-class Task2GainApp extends StatelessWidget {
-  const Task2GainApp({super.key});
+class Task2PlayApp extends StatelessWidget {
+  const Task2PlayApp({super.key});
 
   @override
   Widget build(BuildContext context) {

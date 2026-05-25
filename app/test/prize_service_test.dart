@@ -1,7 +1,7 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:task2gain/models/prize.dart';
-import 'package:task2gain/services/prize_service.dart';
+import 'package:task2play/models/prize.dart';
+import 'package:task2play/services/prize_service.dart';
 
 void main() {
   late FakeFirebaseFirestore db;

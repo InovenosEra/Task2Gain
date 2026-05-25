@@ -5,12 +5,12 @@ const _gold = Color(0xFFFFD166);
 const _pink = Color(0xFFEF476F);
 const _violet = Color(0xFF7B2CBF);
 
-/// Vector logo for Task2Gain — an "achievement emblem": the wordmark
+/// Vector logo for Task2Play — an "achievement emblem": the wordmark
 /// TASK · 2 · GAIN reads as one stamped badge, the words engraved between
 /// hairline rules and evenly spaced around the hero numeral. Scales crisply
 /// at any size.
-class Task2GainLogo extends StatelessWidget {
-  const Task2GainLogo({super.key, this.size = 120, this.iconMode = false});
+class Task2PlayLogo extends StatelessWidget {
+  const Task2PlayLogo({super.key, this.size = 120, this.iconMode = false});
   final double size;
 
   /// When true the badge fills the square edge-to-edge with no drop shadow,

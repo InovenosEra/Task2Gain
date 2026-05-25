@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Tenant-isolated rules for Task2Gain. Every collection enforces that the
+// Tenant-isolated rules for Task2Play. Every collection enforces that the
 // caller is in the same family as the document, and sensitive gamification
 // fields can only be written by an admin of that family. Self-writes are
 // restricted to non-cheatable fields.

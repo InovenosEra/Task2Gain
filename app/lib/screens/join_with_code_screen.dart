@@ -8,7 +8,7 @@ import '../widgets/game_field.dart';
 import '../widgets/gradient_text.dart';
 import '../widgets/page_routes.dart';
 import '../widgets/screen_background.dart';
-import '../widgets/task2gain_logo.dart';
+import '../widgets/task2play_logo.dart';
 import 'main_navigation.dart';
 
 class JoinWithCodeScreen extends StatefulWidget {
@@ -125,7 +125,7 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
                               ]),
                             ),
                           ),
-                          const Task2GainLogo(size: 72),
+                          const Task2PlayLogo(size: 72),
                         ],
                       ),
                     ),

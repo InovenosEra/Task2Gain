@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/gradient_text.dart';
 import '../widgets/screen_background.dart';
-import '../widgets/task2gain_logo.dart';
+import '../widgets/task2play_logo.dart';
 import 'main_navigation.dart';
 import 'welcome_screen.dart';
 
@@ -104,7 +104,7 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ),
                         ),
-                        const Task2GainLogo(size: 160),
+                        const Task2PlayLogo(size: 160),
                       ],
                     ),
                     // Pull the tagline up into the logo's glow so it reads as

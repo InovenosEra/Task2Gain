@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Storage rules for Task2Gain. Quest proof photos live under
+// Storage rules for Task2Play. Quest proof photos live under
 //   quest-proofs/{familyId}/{instanceId}/{file}
 // Only members of the matching family can read; only the assigned kid can
 // write a new file to their own instance's path.

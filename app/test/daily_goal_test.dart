@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:task2gain/services/daily_goal.dart';
+import 'package:task2play/services/daily_goal.dart';
 
 void main() {
   group('crossedDailyGoal', () {

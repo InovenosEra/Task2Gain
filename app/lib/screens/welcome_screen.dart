@@ -5,7 +5,7 @@ import '../widgets/gradient_text.dart';
 import '../widgets/page_routes.dart';
 import '../widgets/scale_tap.dart';
 import '../widgets/screen_background.dart';
-import '../widgets/task2gain_logo.dart';
+import '../widgets/task2play_logo.dart';
 import 'join_with_code_screen.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
@@ -258,7 +258,7 @@ class _FloatingLogo extends StatelessWidget {
                   ),
                 ),
               ),
-              const Task2GainLogo(size: 140),
+              const Task2PlayLogo(size: 140),
             ],
           ),
         );

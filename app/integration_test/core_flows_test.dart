@@ -1,4 +1,4 @@
-// Verification harness for Task2Gain core flows. Launches the real app and
+// Verification harness for Task2Play core flows. Launches the real app and
 // drives navigation through every primary screen, asserting each renders.
 // Read-only: it never submits forms, so it writes nothing to Firebase.
 //
@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'package:task2gain/main.dart' as app;
+import 'package:task2play/main.dart' as app;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

@@ -1,6 +1,6 @@
-# task2gain
+# task2play
 
-Task2Gain - אפליקציה משפחתית למשימות ותגמולים
+Task2Play - אפליקציה משפחתית למשימות ותגמולים
 
 ## Getting Started
 
