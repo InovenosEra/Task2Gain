@@ -313,6 +313,18 @@ class CityGame extends FlameGame with TapCallbacks {
         const [0.0, 0.45, 0.75],
       );
     canvas.drawRect(rect, paint);
+
+    // Warm sun glow in the upper-left (matches the buildings' light source).
+    final sun = Offset(size.x * 0.16, size.y * 0.1);
+    canvas.drawCircle(
+      sun,
+      size.y * 0.5,
+      Paint()
+        ..shader = Gradient.radial(sun, size.y * 0.5, const [
+          Color(0x66FFF4D6),
+          Color(0x00FFF4D6),
+        ]),
+    );
   }
 
   /// Extrudes the grass diamond into a floating island: a soil edge under the
