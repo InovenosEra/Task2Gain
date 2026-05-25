@@ -50,14 +50,16 @@ class _CityScreenState extends State<CityScreen> {
   }
 
   Future<void> _onCellTapped(int gx, int gy) async {
+    final isUpgrade = _city.isOccupied(gx, gy);
     try {
-      if (_city.isOccupied(gx, gy)) {
+      if (isUpgrade) {
         await _cityService.upgradeBuilding(
             uid: widget.data.uid, gridX: gx, gridY: gy);
       } else {
         await _cityService.placeBuilding(
             uid: widget.data.uid, typeId: _selectedType, gridX: gx, gridY: gy);
       }
+      _toast(isUpgrade ? '⬆️ שודרג!' : '🏗️ נבנה!');
     } on StateError catch (e) {
       _toast(e.message);
     } catch (e) {

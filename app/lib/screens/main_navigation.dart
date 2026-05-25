@@ -129,16 +129,16 @@ class _TabHost extends StatelessWidget {
 
   List<_TabSpec> get _tabs => [
         _TabSpec(
-          icon: Icons.assignment_outlined,
-          activeIcon: Icons.assignment_rounded,
-          label: 'משימות',
-          builder: (ctx) => HomeTab(data: data),
-        ),
-        _TabSpec(
           icon: Icons.location_city_outlined,
           activeIcon: Icons.location_city_rounded,
           label: 'העיר',
           builder: (ctx) => CityScreen(data: data),
+        ),
+        _TabSpec(
+          icon: Icons.assignment_outlined,
+          activeIcon: Icons.assignment_rounded,
+          label: 'משימות',
+          builder: (ctx) => HomeTab(data: data),
         ),
         _TabSpec(
           icon: Icons.card_giftcard_outlined,
