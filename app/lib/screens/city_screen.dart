@@ -9,6 +9,7 @@ import '../game/city_game.dart';
 import '../models/city.dart';
 import '../services/city_service.dart';
 import '../theme/app_theme.dart';
+import 'cash_out_sheet.dart';
 import 'main_navigation.dart';
 
 /// The Little City game screen: a Flame isometric city you build by spending
@@ -85,7 +86,11 @@ class _CityScreenState extends State<CityScreen> {
           top: 10,
           left: 12,
           right: 12,
-          child: _Hud(uid: widget.data.uid, cityLevel: _city.cityLevel),
+          child: _Hud(
+            uid: widget.data.uid,
+            familyId: widget.data.familyId,
+            cityLevel: _city.cityLevel,
+          ),
         ),
         Positioned(
           left: 0,
@@ -102,9 +107,14 @@ class _CityScreenState extends State<CityScreen> {
 }
 
 class _Hud extends StatelessWidget {
-  const _Hud({required this.uid, required this.cityLevel});
+  const _Hud({
+    required this.uid,
+    required this.familyId,
+    required this.cityLevel,
+  });
 
   final String uid;
+  final String familyId;
   final int cityLevel;
 
   @override
@@ -121,9 +131,13 @@ class _Hud extends StatelessWidget {
         final xp = (w['points'] as num?)?.toInt() ?? 0;
         return Row(
           children: [
-            _chip('⚡', '$tokens', 'טוקנים', AppPalette.gold),
+            _chip('⚡', '$tokens', 'אסימונים', AppPalette.gold),
             const SizedBox(width: 8),
-            _chip('⭐', '$xp', 'XP', AppPalette.pink),
+            GestureDetector(
+              onTap: () =>
+                  showCashOutSheet(context, uid: uid, familyId: familyId),
+              child: _chip('⭐', '$xp', 'נקודות ↓', AppPalette.pink),
+            ),
             const Spacer(),
             _chip('🏙️', 'רמה $cityLevel', '', Colors.white),
           ],

@@ -27,14 +27,14 @@ class BuildingType {
 }
 
 const List<BuildingType> kBuildingCatalog = [
-  BuildingType(id: 'house',     displayName: 'House',      icon: '🏠', baseTokenCost: 10, baseXpReward: 8),
-  BuildingType(id: 'shop',      displayName: 'Shop',       icon: '🏪', baseTokenCost: 20, baseXpReward: 16),
-  BuildingType(id: 'park',      displayName: 'Park',       icon: '🌳', baseTokenCost: 8,  baseXpReward: 6),
-  BuildingType(id: 'school',    displayName: 'School',     icon: '🏫', baseTokenCost: 20, baseXpReward: 16),
-  BuildingType(id: 'factory',   displayName: 'Factory',    icon: '🏭', baseTokenCost: 30, baseXpReward: 26),
-  BuildingType(id: 'apartment', displayName: 'Apartments', icon: '🏢', baseTokenCost: 25, baseXpReward: 22),
-  BuildingType(id: 'decor',     displayName: 'Decoration', icon: '🗿', baseTokenCost: 4,  baseXpReward: 2),
-  BuildingType(id: 'road',      displayName: 'Road',       icon: '🛣️', baseTokenCost: 2,  baseXpReward: 1),
+  BuildingType(id: 'house',     displayName: 'בית',     icon: '🏠', baseTokenCost: 10, baseXpReward: 8),
+  BuildingType(id: 'shop',      displayName: 'חנות',    icon: '🏪', baseTokenCost: 20, baseXpReward: 16),
+  BuildingType(id: 'park',      displayName: 'פארק',    icon: '🌳', baseTokenCost: 8,  baseXpReward: 6),
+  BuildingType(id: 'school',    displayName: 'בית ספר', icon: '🏫', baseTokenCost: 20, baseXpReward: 16),
+  BuildingType(id: 'factory',   displayName: 'מפעל',    icon: '🏭', baseTokenCost: 30, baseXpReward: 26),
+  BuildingType(id: 'apartment', displayName: 'בניין',   icon: '🏢', baseTokenCost: 25, baseXpReward: 22),
+  BuildingType(id: 'decor',     displayName: 'קישוט',   icon: '🗿', baseTokenCost: 4,  baseXpReward: 2),
+  BuildingType(id: 'road',      displayName: 'כביש',    icon: '🛣️', baseTokenCost: 2,  baseXpReward: 1),
 ];
 
 BuildingType? buildingTypeById(String id) {

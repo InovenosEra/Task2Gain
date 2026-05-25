@@ -90,11 +90,11 @@ class WalletService {
     required String userUid,
     required int xpToSpend,
   }) async {
-    if (xpToSpend <= 0) throw StateError('יש להמיר כמות חיובית של XP');
+    if (xpToSpend <= 0) throw StateError('יש להמיר כמות חיובית של נקודות');
     final tokensOut = tokensFromXp(xpToSpend);
     if (tokensOut <= 0) throw StateError('כמות קטנה מדי להמרה');
     if (tokensOut > kXpToTokenDailyCap) {
-      throw StateError('המקסימום היומי הוא $kXpToTokenDailyCap טוקנים');
+      throw StateError('המקסימום היומי הוא $kXpToTokenDailyCap אסימונים');
     }
 
     final walletRef = _firestore.collection('wallets').doc(userUid);
@@ -108,7 +108,7 @@ class WalletService {
       final wallet = walletSnap.data()!;
       final points = (wallet['points'] as num?)?.toInt() ?? 0;
       final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
-      if (xpToSpend > points) throw StateError('אין מספיק XP');
+      if (xpToSpend > points) throw StateError('אין מספיק נקודות');
 
       // Daily cap (resets when the UTC date rolls over).
       final capMap = (userSnap.data()?['xpToTokenToday'] as Map?)

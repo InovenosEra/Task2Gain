@@ -38,7 +38,7 @@ class CityService {
       final wallet = walletSnap.data()!;
       final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
       final cost = type.tokenCostForLevel(1);
-      if (tokens < cost) throw StateError('אין מספיק טוקנים');
+      if (tokens < cost) throw StateError('אין מספיק אסימונים');
 
       final xp = type.xpRewardForLevel(1);
       final points = (wallet['points'] as num?)?.toInt() ?? 0;
@@ -93,7 +93,7 @@ class CityService {
 
       final wallet = walletSnap.data()!;
       final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
-      if (tokens < cost) throw StateError('אין מספיק טוקנים');
+      if (tokens < cost) throw StateError('אין מספיק אסימונים');
       final points = (wallet['points'] as num?)?.toInt() ?? 0;
       final lifetime = (wallet['lifetimeEarned'] as Map?)?.cast<String, dynamic>() ??
           <String, dynamic>{'points': 0, 'money': 0};
