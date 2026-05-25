@@ -61,6 +61,7 @@ class CityService {
         'lifetimeEarned': {
           'points': ((lifetime['points'] as num?)?.toInt() ?? 0) + xp,
           'money': (lifetime['money'] as num?)?.toInt() ?? 0,
+          'tokens': (lifetime['tokens'] as num?)?.toInt() ?? 0,
         },
       });
     });
@@ -111,6 +112,7 @@ class CityService {
         'lifetimeEarned': {
           'points': ((lifetime['points'] as num?)?.toInt() ?? 0) + xp,
           'money': (lifetime['money'] as num?)?.toInt() ?? 0,
+          'tokens': (lifetime['tokens'] as num?)?.toInt() ?? 0,
         },
       });
     });

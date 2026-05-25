@@ -189,7 +189,7 @@ class QuestInstanceService {
         .map((b) => (b is Map ? b['id'] as String? : null) ?? '')
         .toSet();
     final metrics = BadgeMetrics(
-      lifetimePoints: 0, // chores no longer track points; badges use streak/quests
+      lifetimePoints: (lifetime['points'] as num?)?.toInt() ?? 0,
       currentStreak: streakCurrent,
       longestStreak: streakLongest,
       questsCompleted: questsCompleted,
@@ -211,6 +211,7 @@ class QuestInstanceService {
       'lifetimeEarned': {
         'tokens': ((lifetime['tokens'] as num?)?.toInt() ?? 0) + points + tokensEarned,
         'money': (lifetime['money'] as num?)?.toInt() ?? 0,
+        'points': (lifetime['points'] as num?)?.toInt() ?? 0,
       },
     });
 

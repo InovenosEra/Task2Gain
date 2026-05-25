@@ -32,11 +32,12 @@ class PrizeService {
           updates['points'] = FieldValue.increment(reward.intValue);
           final lifetime =
               (wallet['lifetimeEarned'] as Map?)?.cast<String, dynamic>() ??
-                  <String, dynamic>{'points': 0, 'money': 0};
+                  <String, dynamic>{'points': 0, 'money': 0, 'tokens': 0};
           updates['lifetimeEarned'] = {
             'points':
                 ((lifetime['points'] as num?)?.toInt() ?? 0) + reward.intValue,
             'money': (lifetime['money'] as num?)?.toInt() ?? 0,
+            'tokens': (lifetime['tokens'] as num?)?.toInt() ?? 0,
           };
           break;
         case PrizeType.tokens:

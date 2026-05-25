@@ -63,6 +63,7 @@ class WalletService {
         'lifetimeEarned': {
           'points': (lifetime['points'] as num?)?.toInt() ?? 0,
           'money': newLifetimeMoney,
+          'tokens': (lifetime['tokens'] as num?)?.toInt() ?? 0,
         },
       });
 

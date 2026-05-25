@@ -80,4 +80,17 @@ void main() {
       throwsA(isA<StateError>()),
     );
   });
+
+  test('placeBuilding preserves lifetimeEarned.tokens', () async {
+    await db.collection('wallets').doc('kid1').set({
+      'lifetimeEarned': {'points': 5, 'money': 0, 'tokens': 7},
+    }, SetOptions(merge: true));
+
+    await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0); // xp 8
+
+    final life = (await db.collection('wallets').doc('kid1').get())
+        .data()!['lifetimeEarned'] as Map;
+    expect(life['points'], 13); // 5 + 8
+    expect(life['tokens'], 7);  // preserved, not wiped
+  });
 }
