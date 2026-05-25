@@ -11,9 +11,9 @@ import '../widgets/page_routes.dart';
 import '../widgets/scale_tap.dart';
 import '../widgets/screen_background.dart';
 import 'admin_screen.dart';
+import 'city_screen.dart';
 import 'family_tab.dart';
 import 'home_tab.dart';
-import 'prize_machine_screen.dart';
 import 'profile_tab.dart';
 import 'shop_tab.dart';
 import 'welcome_screen.dart';
@@ -135,10 +135,10 @@ class _TabHost extends StatelessWidget {
           builder: (ctx) => HomeTab(data: data),
         ),
         _TabSpec(
-          icon: Icons.casino_outlined,
-          activeIcon: Icons.casino_rounded,
-          label: 'פרסים',
-          builder: (ctx) => PrizeMachineScreen(data: data),
+          icon: Icons.location_city_outlined,
+          activeIcon: Icons.location_city_rounded,
+          label: 'העיר',
+          builder: (ctx) => CityScreen(data: data),
         ),
         _TabSpec(
           icon: Icons.card_giftcard_outlined,

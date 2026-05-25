@@ -1,6 +1,9 @@
 # Claude Code local settings
 .claude/
 
+# Superpowers brainstorm/visual-companion scratch files
+.superpowers/
+
 # Flutter build artifacts (generated)
 build/
 .dart_tool/

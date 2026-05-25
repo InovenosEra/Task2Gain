@@ -80,14 +80,15 @@ service cloud.firestore {
       allow read: if request.auth.uid == walletId
                   || isAdminOfFamily(resource.data.familyId);
 
-      // Self: convertPoints debits points and credits money in one tx — both
-      // happen on a self-update, so we accept either pattern. To prevent kids
-      // topping themselves up, require points NEVER increase and money
-      // increase is at most points-delta * 1 ILS (rough guard; rate is per
-      // family, so we just block obvious abuse).
-      // Admin in same family: free updates (approve credits).
-      allow update: if (request.auth.uid == walletId
-                        && request.resource.data.points <= resource.data.points)
+      // Self-updates: in the Little City model the player spends tokens to
+      // build (debit tokens) and earns XP (the `points` field) from building,
+      // and converts XP -> tokens / money client-side. So a player may freely
+      // update their own wallet. SECURITY NOTE: this trusts the client and is
+      // a known cheat vector (a player could inflate their own XP/tokens). It
+      // is acceptable for the prototype; the sensitive credits MUST move to
+      // Cloud Functions before production (see design spec NF2). Admin in the
+      // same family may also update (chore approval credits).
+      allow update: if request.auth.uid == walletId
                     || isAdminOfFamily(resource.data.familyId);
 
       allow delete: if false;
@@ -168,6 +169,15 @@ service cloud.firestore {
     // ---------------- user reward targets (savings goal) ----------------
     match /users/{userId}/rewardTargets/{targetId} {
       allow read, write: if request.auth.uid == userId;
+    }
+
+    // ---------------- cities (Little City game state) ----------------
+    // A player owns their own city document. Family admins may read a child's
+    // city (to watch progress); only the owner writes it.
+    match /cities/{userId} {
+      allow read: if request.auth.uid == userId
+                  || isAdmin();
+      allow write: if request.auth.uid == userId;
     }
 
     // Default deny for anything else.
