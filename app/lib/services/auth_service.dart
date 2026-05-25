@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'wallet_seed.dart';
+
 class AuthService {
   AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
       : _auth = auth ?? FirebaseAuth.instance,
@@ -52,15 +54,8 @@ class AuthService {
       'badges': <Map<String, dynamic>>[],
       'createdAt': FieldValue.serverTimestamp(),
     });
-    batch.set(_firestore.collection('wallets').doc(uid), {
-      'userId': uid,
-      'familyId': familyRef.id,
-      'points': 0,
-      'moneyILS': 0,
-      'tokens': 0,
-      'cosmeticsOwned': <String>[],
-      'lifetimeEarned': {'points': 0, 'money': 0},
-    });
+    batch.set(_firestore.collection('wallets').doc(uid),
+        initialWalletData(uid: uid, familyId: familyRef.id));
     await batch.commit();
 
     return familyRef.id;
@@ -104,15 +99,8 @@ class AuthService {
       'badges': <Map<String, dynamic>>[],
       'createdAt': FieldValue.serverTimestamp(),
     });
-    batch.set(_firestore.collection('wallets').doc(uid), {
-      'userId': uid,
-      'familyId': familyId,
-      'points': 0,
-      'moneyILS': 0,
-      'tokens': 0,
-      'cosmeticsOwned': <String>[],
-      'lifetimeEarned': {'points': 0, 'money': 0},
-    });
+    batch.set(_firestore.collection('wallets').doc(uid),
+        initialWalletData(uid: uid, familyId: familyId));
     batch.update(inviteRef, {
       'status': 'used',
       'usedBy': uid,
