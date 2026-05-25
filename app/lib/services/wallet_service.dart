@@ -98,20 +98,19 @@ class WalletService {
     }
 
     final walletRef = _firestore.collection('wallets').doc(userUid);
-    final userRef = _firestore.collection('users').doc(userUid);
     final today = _utcDayKey(DateTime.now());
 
     return _firestore.runTransaction<int>((tx) async {
       final walletSnap = await tx.get(walletRef);
-      final userSnap = await tx.get(userRef);
       if (!walletSnap.exists) throw StateError('ארנק לא נמצא');
       final wallet = walletSnap.data()!;
       final points = (wallet['points'] as num?)?.toInt() ?? 0;
       final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
       if (xpToSpend > points) throw StateError('אין מספיק נקודות');
 
-      // Daily cap (resets when the UTC date rolls over).
-      final capMap = (userSnap.data()?['xpToTokenToday'] as Map?)
+      // Daily cap tracked on the wallet (which the player may self-update),
+      // resets when the UTC date rolls over.
+      final capMap = (wallet['xpToTokenToday'] as Map?)
               ?.cast<String, dynamic>() ??
           const {};
       final usedToday =
@@ -123,10 +122,8 @@ class WalletService {
       tx.update(walletRef, {
         'points': points - xpToSpend,
         'tokens': tokens + tokensOut,
-      });
-      tx.set(userRef, {
         'xpToTokenToday': {'date': today, 'tokens': usedToday + tokensOut},
-      }, SetOptions(merge: true));
+      });
 
       return tokensOut;
     });

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/events.dart';
@@ -25,6 +26,20 @@ class CityGame extends FlameGame with TapCallbacks {
 
   Vector2 _origin = Vector2.zero();
 
+  // --- juice / effects ---
+  final List<_FloatText> _floats = [];
+  final List<_Confetti> _confetti = [];
+  final Map<String, double> _pop = {}; // 'gx_gy' -> elapsed seconds
+  final Random _rand = Random();
+  static const double _popDur = 0.45;
+  static const List<Color> _confettiColors = [
+    Color(0xFFFFD24A),
+    Color(0xFFFF6F9C),
+    Color(0xFF57C9A0),
+    Color(0xFF7C83FF),
+    Color(0xFFFF8B6B),
+  ];
+
   /// Placeholder colours per building type id (roof / left / right faces
   /// are derived from this base).
   static const Map<String, int> _typeColor = {
@@ -40,6 +55,51 @@ class CityGame extends FlameGame with TapCallbacks {
 
   void setBuildings(List<PlacedBuilding> buildings) {
     _buildings = buildings;
+  }
+
+  /// Plays the build/upgrade feedback at a cell: a pop-in, a rising "+XP",
+  /// and (on a surprise) a confetti burst.
+  void celebrate(int gx, int gy, {required int xpGained, int bonusTokens = 0}) {
+    _pop['${gx}_$gy'] = 0;
+    final top = _iso(gx + 0.5, gy + 0.5, 42);
+    if (xpGained > 0) {
+      _floats.add(_FloatText(
+          Offset(top.dx, top.dy), '+$xpGained', const Color(0xFFFF6F9C)));
+    }
+    if (bonusTokens > 0) {
+      _floats.add(_FloatText(Offset(top.dx, top.dy - 22), '🎁 +$bonusTokens',
+          const Color(0xFFFFD24A)));
+      for (var i = 0; i < 22; i++) {
+        final ang = _rand.nextDouble() * pi * 2;
+        final spd = 80 + _rand.nextDouble() * 170;
+        _confetti.add(_Confetti(
+          Offset(top.dx, top.dy),
+          vx: cos(ang) * spd,
+          vy: sin(ang) * spd - 130,
+          color: _confettiColors[i % _confettiColors.length],
+          spin: (_rand.nextDouble() - 0.5) * 12,
+        ));
+      }
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _pop.updateAll((k, v) => v + dt);
+    _pop.removeWhere((k, v) => v > _popDur);
+    for (final f in _floats) {
+      f.pos = Offset(f.pos.dx, f.pos.dy - 34 * dt);
+      f.age += dt;
+    }
+    _floats.removeWhere((f) => f.age > f.life);
+    for (final c in _confetti) {
+      c.vy += 430 * dt;
+      c.pos = Offset(c.pos.dx + c.vx * dt, c.pos.dy + c.vy * dt);
+      c.rot += c.spin * dt;
+      c.age += dt;
+    }
+    _confetti.removeWhere((c) => c.age > c.life);
   }
 
   @override
@@ -68,6 +128,13 @@ class CityGame extends FlameGame with TapCallbacks {
       ..sort((a, b) => (a.gridX + a.gridY).compareTo(b.gridX + b.gridY));
     for (final b in sorted) {
       _drawBuilding(canvas, b);
+    }
+
+    for (final c in _confetti) {
+      _drawConfetti(canvas, c);
+    }
+    for (final f in _floats) {
+      _drawFloat(canvas, f);
     }
   }
 
@@ -108,6 +175,18 @@ class CityGame extends FlameGame with TapCallbacks {
   }
 
   void _drawBuilding(Canvas canvas, PlacedBuilding b) {
+    final pop = _pop['${b.gridX}_${b.gridY}'];
+    final scale =
+        pop == null ? 1.0 : _easeOutBack((pop / _popDur).clamp(0.0, 1.0));
+    final anchor = _iso(b.gridX + 0.5, b.gridY + 1.0);
+    final scaled = scale != 1.0;
+    if (scaled) {
+      canvas.save();
+      canvas.translate(anchor.dx, anchor.dy);
+      canvas.scale(scale);
+      canvas.translate(-anchor.dx, -anchor.dy);
+    }
+
     final baseColor = Color(_typeColor[b.typeId] ?? 0xFFBBBBBB);
     final h = 22.0 + (b.level - 1) * 16.0;
     const inset = 0.12;
@@ -141,6 +220,51 @@ class CityGame extends FlameGame with TapCallbacks {
       final top = _iso(b.gridX + 0.5, b.gridY + 0.5, h);
       _drawLevelBadge(canvas, Offset(top.dx, top.dy - 6), b.level);
     }
+
+    if (scaled) canvas.restore();
+  }
+
+  double _easeOutBack(double t) {
+    const c1 = 1.70158, c3 = c1 + 1;
+    final x = t - 1;
+    return 1 + c3 * x * x * x + c1 * x * x;
+  }
+
+  Color _fade(Color c, double op) => Color.fromARGB(
+        (op.clamp(0.0, 1.0) * 255).round(),
+        (c.r * 255).round(),
+        (c.g * 255).round(),
+        (c.b * 255).round(),
+      );
+
+  void _drawConfetti(Canvas canvas, _Confetti c) {
+    final op = (1 - c.age / c.life).clamp(0.0, 1.0);
+    canvas.save();
+    canvas.translate(c.pos.dx, c.pos.dy);
+    canvas.rotate(c.rot);
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset.zero, width: 6, height: 9),
+      Paint()..color = _fade(c.color, op),
+    );
+    canvas.restore();
+  }
+
+  void _drawFloat(Canvas canvas, _FloatText f) {
+    final op = (1 - f.age / f.life).clamp(0.0, 1.0);
+    final builder = ParagraphBuilder(ParagraphStyle(
+      textAlign: TextAlign.center,
+      fontSize: 21,
+      fontWeight: FontWeight.w900,
+    ))
+      ..pushStyle(TextStyle(
+        color: _fade(f.color, op),
+        shadows: [
+          Shadow(color: _fade(const Color(0xFF000000), op * 0.6), blurRadius: 4),
+        ],
+      ))
+      ..addText(f.text);
+    final p = builder.build()..layout(const ParagraphConstraints(width: 140));
+    canvas.drawParagraph(p, Offset(f.pos.dx - 70, f.pos.dy));
   }
 
   void _drawLevelBadge(Canvas canvas, Offset center, int level) {
@@ -199,4 +323,31 @@ class CityGame extends FlameGame with TapCallbacks {
     if (gx < 0 || gy < 0 || gx >= gridSize || gy >= gridSize) return;
     onCellTapped(gx, gy);
   }
+}
+
+class _FloatText {
+  _FloatText(this.pos, this.text, this.color);
+  Offset pos;
+  final String text;
+  final Color color;
+  final double life = 1.1;
+  double age = 0;
+}
+
+class _Confetti {
+  _Confetti(
+    this.pos, {
+    required this.vx,
+    required this.vy,
+    required this.color,
+    required this.spin,
+  });
+  Offset pos;
+  double vx;
+  double vy;
+  final Color color;
+  double spin;
+  double rot = 0;
+  final double life = 1.3;
+  double age = 0;
 }

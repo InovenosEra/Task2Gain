@@ -7,10 +7,16 @@ import '../game/building_catalog.dart';
 import '../game/economy_config.dart';
 import '../models/city.dart';
 
-/// Outcome of a place/upgrade action, so the UI can celebrate a surprise.
+/// Outcome of a place/upgrade action, so the UI can celebrate it.
 class BuildResult {
-  const BuildResult({this.bonusTokens = 0});
+  const BuildResult({
+    this.bonusTokens = 0,
+    this.xpGained = 0,
+    this.tokensSpent = 0,
+  });
   final int bonusTokens;
+  final int xpGained;
+  final int tokensSpent;
   bool get hasBonus => bonusTokens > 0;
 }
 
@@ -85,7 +91,7 @@ class CityService {
         },
       });
 
-      return BuildResult(bonusTokens: bonus);
+      return BuildResult(bonusTokens: bonus, xpGained: xp, tokensSpent: cost);
     });
   }
 
@@ -139,7 +145,7 @@ class CityService {
         },
       });
 
-      return BuildResult(bonusTokens: bonus);
+      return BuildResult(bonusTokens: bonus, xpGained: xp, tokensSpent: cost);
     });
   }
 

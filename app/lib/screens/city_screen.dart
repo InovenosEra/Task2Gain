@@ -60,11 +60,8 @@ class _CityScreenState extends State<CityScreen> {
               typeId: _selectedType,
               gridX: gx,
               gridY: gy);
-      if (result.hasBonus) {
-        _toast('🎁 בונוס! +${result.bonusTokens} אסימונים 🎉');
-      } else {
-        _toast(isUpgrade ? '⬆️ שודרג!' : '🏗️ נבנה!');
-      }
+      _game.celebrate(gx, gy,
+          xpGained: result.xpGained, bonusTokens: result.bonusTokens);
     } on StateError catch (e) {
       _toast(e.message);
     } catch (e) {
@@ -159,19 +156,30 @@ class _Hud extends StatelessWidget {
         final xp = (w['points'] as num?)?.toInt() ?? 0;
         return Row(
           children: [
-            _chip('⚡', '$tokens', 'אסימונים', AppPalette.gold),
+            _numChip('⚡', tokens, 'אסימונים', AppPalette.gold),
             const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () =>
-                  showCashOutSheet(context, uid: uid, familyId: familyId),
-              child: _chip('⭐', '$xp', 'נקודות ↓', AppPalette.pink),
-            ),
+            _numChip('⭐', xp, 'נקודות ↓', AppPalette.pink,
+                onTap: () =>
+                    showCashOutSheet(context, uid: uid, familyId: familyId)),
             const Spacer(),
             _chip('🏙️', 'רמה $cityLevel', '', Colors.white),
           ],
         );
       },
     );
+  }
+
+  /// A currency chip whose number animates (counts) when it changes.
+  Widget _numChip(String icon, int value, String label, Color accent,
+      {VoidCallback? onTap}) {
+    final chip = TweenAnimationBuilder<double>(
+      tween: Tween(end: value.toDouble()),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+      builder: (_, v, _) =>
+          _chip(icon, v.round().toString(), label, accent),
+    );
+    return onTap == null ? chip : GestureDetector(onTap: onTap, child: chip);
   }
 
   Widget _chip(String icon, String value, String label, Color accent) {
