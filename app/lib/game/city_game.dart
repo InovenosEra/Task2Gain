@@ -714,14 +714,16 @@ class CityGame extends FlameGame with TapCallbacks {
   /// and the layout is stable across frames). Returns null for most tiles.
   _SceneryKind? _sceneryAt(int gx, int gy) {
     final h = ((gx * 73856093) ^ (gy * 19349663)) & 0x7fffffff;
-    if (h % 100 >= 22) return null; // ~22% of empty tiles get something
-    switch ((h ~/ 100) % 3) {
+    if (h % 100 >= 26) return null; // ~26% of empty tiles get something
+    switch ((h ~/ 100) % 4) {
       case 0:
         return _SceneryKind.bush;
       case 1:
         return _SceneryKind.flowers;
-      default:
+      case 2:
         return _SceneryKind.rock;
+      default:
+        return _SceneryKind.person;
     }
   }
 
@@ -766,6 +768,33 @@ class CityGame extends FlameGame with TapCallbacks {
               center: Offset(c.dx - 2, c.dy - 2), width: 10, height: 7),
           Paint()..color = const Color(0xFFB6BCC6),
         );
+      case _SceneryKind.person:
+        const shirts = [
+          Color(0xFFEF476F),
+          Color(0xFF4CC9F0),
+          Color(0xFFFFD166),
+          Color(0xFF06D6A0),
+          Color(0xFF7C83FF),
+        ];
+        final h = ((gx * 12345) ^ (gy * 6789)) & 0x7fffffff;
+        final shirt = shirts[h % shirts.length];
+        // shadow
+        canvas.drawOval(
+          Rect.fromCenter(
+              center: Offset(c.dx, c.dy + 2), width: 10, height: 4),
+          Paint()..color = const Color(0x22000000),
+        );
+        // body (rounded) + head
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+                center: Offset(c.dx, c.dy - 5), width: 7, height: 11),
+            const Radius.circular(3),
+          ),
+          Paint()..color = shirt,
+        );
+        canvas.drawCircle(
+            Offset(c.dx, c.dy - 12), 3.2, Paint()..color = const Color(0xFFF1C9A5));
     }
   }
 
@@ -917,7 +946,7 @@ enum _Roof { pyramid, flat, dome, none }
 
 enum _Kind { building, road, park, decor }
 
-enum _SceneryKind { bush, flowers, rock }
+enum _SceneryKind { bush, flowers, rock, person }
 
 /// A slow background cloud puff that drifts across the sky and wraps around.
 class _Cloud {
