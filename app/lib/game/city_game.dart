@@ -95,8 +95,14 @@ class CityGame extends FlameGame with TapCallbacks {
   static const _Style _fallback =
       _Style(roof: _Roof.flat, roofColor: Color(0xFFBBBBBB));
 
+  Set<String> _roadCells = {};
+
   void setBuildings(List<PlacedBuilding> buildings) {
     _buildings = buildings;
+    _roadCells = {
+      for (final b in buildings)
+        if (b.typeId == 'road') '${b.gridX}_${b.gridY}'
+    };
   }
 
   @override
@@ -758,25 +764,42 @@ class CityGame extends FlameGame with TapCallbacks {
     canvas.drawPath(flag, Paint()..color = const Color(0xFFEF476F));
   }
 
-  /// A flat asphalt tile with a dashed centerline.
+  /// A flat asphalt tile that auto-connects to neighbouring road tiles:
+  /// dashed lane markings run from the centre toward each adjacent road.
   void _drawRoad(Canvas canvas, PlacedBuilding b) {
     final x = b.gridX, y = b.gridY;
     final path = _tilePath(x.toDouble(), y.toDouble(), x + 1.0, y + 1.0);
     canvas.drawPath(path, Paint()..color = const Color(0xFF9BA1AD));
-    // sidewalk inset
-    final inner = _tilePath(x + 0.12, y + 0.12, x + 0.88, y + 0.88);
+    final inner = _tilePath(x + 0.1, y + 0.1, x + 0.9, y + 0.9);
     canvas.drawPath(inner, Paint()..color = const Color(0xFFB7BCC7));
-    // dashed centerline along the gx axis
-    final a = _iso(x + 0.5, y + 0.12);
-    final bEnd = _iso(x + 0.5, y + 0.88);
+
+    final center = _iso(x + 0.5, y + 0.5);
     final dash = Paint()
       ..color = const Color(0xFFFFFFFF)
       ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round;
-    for (var s = 0.0; s < 1.0; s += 0.34) {
-      final p1 = Offset.lerp(a, bEnd, s)!;
-      final p2 = Offset.lerp(a, bEnd, (s + 0.17).clamp(0.0, 1.0))!;
-      canvas.drawLine(p1, p2, dash);
+    // Edge midpoints toward each of the 4 grid neighbours.
+    final dirs = <List<int>, Offset>{
+      [1, 0]: _iso(x + 1, y + 0.5),
+      [-1, 0]: _iso(x.toDouble(), y + 0.5),
+      [0, 1]: _iso(x + 0.5, y + 1),
+      [0, -1]: _iso(x + 0.5, y.toDouble()),
+    };
+    var connected = 0;
+    dirs.forEach((d, edge) {
+      if (_roadCells.contains('${x + d[0]}_${y + d[1]}')) {
+        connected++;
+        // dashed line from centre to the shared edge
+        for (var s = 0.1; s < 1.0; s += 0.34) {
+          final p1 = Offset.lerp(center, edge, s)!;
+          final p2 = Offset.lerp(center, edge, (s + 0.17).clamp(0.0, 1.0))!;
+          canvas.drawLine(p1, p2, dash);
+        }
+      }
+    });
+    // Lone road tile: a single centred dash so it still reads as a road.
+    if (connected == 0) {
+      canvas.drawCircle(center, 2.2, Paint()..color = const Color(0xFFFFFFFF));
     }
   }
 
