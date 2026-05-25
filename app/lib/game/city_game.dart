@@ -164,11 +164,24 @@ class CityGame extends FlameGame with TapCallbacks {
     _drawSky(canvas);
     _drawGround(canvas);
 
-    // Painter's algorithm: far tiles (small gx+gy) first.
-    final sorted = [..._buildings]
-      ..sort((a, b) => (a.gridX + a.gridY).compareTo(b.gridX + b.gridY));
-    for (final b in sorted) {
-      _drawBuilding(canvas, b);
+    // Painter's algorithm: buildings + ambient scenery, far tiles first.
+    final occupied = {for (final b in _buildings) '${b.gridX}_${b.gridY}'};
+    final items = <_Drawable>[
+      for (final b in _buildings)
+        _Drawable(b.gridX, b.gridY, () => _drawBuilding(canvas, b)),
+    ];
+    for (var x = 0; x < gridSize; x++) {
+      for (var y = 0; y < gridSize; y++) {
+        if (occupied.contains('${x}_$y')) continue;
+        final kind = _sceneryAt(x, y);
+        if (kind != null) {
+          items.add(_Drawable(x, y, () => _drawSceneryItem(canvas, x, y, kind)));
+        }
+      }
+    }
+    items.sort((a, b) => (a.gx + a.gy).compareTo(b.gx + b.gy));
+    for (final it in items) {
+      it.draw();
     }
 
     for (final c in _confetti) {
@@ -538,6 +551,65 @@ class CityGame extends FlameGame with TapCallbacks {
         Paint()..color = const Color(0xFFFFD98A));
   }
 
+  /// Deterministic ambient scenery for an empty tile (so the green isn't bare
+  /// and the layout is stable across frames). Returns null for most tiles.
+  _SceneryKind? _sceneryAt(int gx, int gy) {
+    final h = ((gx * 73856093) ^ (gy * 19349663)) & 0x7fffffff;
+    if (h % 100 >= 22) return null; // ~22% of empty tiles get something
+    switch ((h ~/ 100) % 3) {
+      case 0:
+        return _SceneryKind.bush;
+      case 1:
+        return _SceneryKind.flowers;
+      default:
+        return _SceneryKind.rock;
+    }
+  }
+
+  void _drawSceneryItem(Canvas canvas, int gx, int gy, _SceneryKind kind) {
+    final c = _iso(gx + 0.5, gy + 0.5);
+    switch (kind) {
+      case _SceneryKind.bush:
+        canvas.drawOval(
+          Rect.fromCenter(
+              center: Offset(c.dx, c.dy + 2),
+              width: tileW * 0.3,
+              height: tileH * 0.35),
+          Paint()..color = const Color(0x22000000),
+        );
+        canvas.drawCircle(Offset(c.dx - 4, c.dy - 4), 7,
+            Paint()..color = const Color(0xFF4FB477));
+        canvas.drawCircle(Offset(c.dx + 5, c.dy - 2), 6,
+            Paint()..color = const Color(0xFF57C079));
+        canvas.drawCircle(Offset(c.dx, c.dy - 8), 6,
+            Paint()..color = const Color(0xFF6FCB90));
+      case _SceneryKind.flowers:
+        const petals = [
+          Color(0xFFEF476F),
+          Color(0xFFFFD166),
+          Color(0xFF7C83FF),
+          Color(0xFFFFFFFF),
+        ];
+        for (var i = 0; i < 4; i++) {
+          final dx = (i.isEven ? -1 : 1) * (4 + (i ~/ 2) * 7).toDouble();
+          final dy = (i < 2 ? -3 : 4).toDouble();
+          canvas.drawCircle(
+              Offset(c.dx + dx, c.dy + dy), 3, Paint()..color = petals[i]);
+        }
+      case _SceneryKind.rock:
+        canvas.drawOval(
+          Rect.fromCenter(
+              center: Offset(c.dx, c.dy), width: 16, height: 11),
+          Paint()..color = const Color(0xFF9AA1AC),
+        );
+        canvas.drawOval(
+          Rect.fromCenter(
+              center: Offset(c.dx - 2, c.dy - 2), width: 10, height: 7),
+          Paint()..color = const Color(0xFFB6BCC6),
+        );
+    }
+  }
+
   void _contactShadow(Canvas canvas, num x0, num y0, num x1, num y1,
       {int alpha = 0x33}) {
     canvas.drawPath(_tilePath(x0.toDouble(), y0.toDouble(), x1.toDouble(),
@@ -685,6 +757,16 @@ class CityGame extends FlameGame with TapCallbacks {
 enum _Roof { pyramid, flat, none }
 
 enum _Kind { building, road, park, decor }
+
+enum _SceneryKind { bush, flowers, rock }
+
+/// A depth-sortable draw call (buildings + ambient scenery share one pass).
+class _Drawable {
+  _Drawable(this.gx, this.gy, this.draw);
+  final int gx;
+  final int gy;
+  final void Function() draw;
+}
 
 /// Render recipe for a building type: roof shape + accent colour, base height
 /// and per-level growth. [kind] selects a special ground feature (road/park/
