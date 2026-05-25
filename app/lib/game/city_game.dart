@@ -304,6 +304,9 @@ class CityGame extends FlameGame with TapCallbacks {
     Offset c(num gx, num gy) => _iso(gx, gy); // base
     Offset t(num gx, num gy) => _iso(gx, gy, h); // wall top
 
+    // Subtle per-building roof shade so a row of same-type buildings varies.
+    final roofC = _shade(style.roofColor, _jitter(b.gridX, b.gridY));
+
     final floors = (h / 14).round().clamp(2, 12);
     if (style.glass) {
       // Glass curtain-wall skyscraper: tinted gradient + mullion grid + sheen.
@@ -331,6 +334,24 @@ class CityGame extends FlameGame with TapCallbacks {
       // Door on the front-right face, ground-level centre.
       _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 0.40, 0.60,
           0.0, 0.30 * (16 / h).clamp(0.4, 1.0), const Color(0xFF8A5A3B));
+
+      // Shop: a striped awning over the storefront.
+      if (b.typeId == 'shop') {
+        final vTop = (0.46 * (16 / h)).clamp(0.18, 0.46);
+        for (var k = 0; k < 6; k++) {
+          _facePanel(
+              canvas,
+              c(x1, y1),
+              c(x0, y1),
+              t(x1, y1),
+              t(x0, y1),
+              k / 6,
+              (k + 1) / 6,
+              vTop * 0.62,
+              vTop,
+              k.isEven ? const Color(0xFFEF476F) : const Color(0xFFFFF3EC));
+        }
+      }
     }
 
     // Roof.
@@ -340,10 +361,10 @@ class CityGame extends FlameGame with TapCallbacks {
       final roofH = h * 0.5 + 18;
       final apex = _iso(cx, cy, h + roofH);
       // back/left (bright), right (dark), front (mid), left (mid-bright)
-      _face(canvas, [rim[0], rim[1], apex], _shade(style.roofColor, 1.12));
-      _face(canvas, [rim[1], rim[2], apex], _shade(style.roofColor, 0.74));
-      _face(canvas, [rim[2], rim[3], apex], _shade(style.roofColor, 0.94));
-      _face(canvas, [rim[3], rim[0], apex], _shade(style.roofColor, 1.04));
+      _face(canvas, [rim[0], rim[1], apex], _shade(roofC, 1.12));
+      _face(canvas, [rim[1], rim[2], apex], _shade(roofC, 0.74));
+      _face(canvas, [rim[2], rim[3], apex], _shade(roofC, 0.94));
+      _face(canvas, [rim[3], rim[0], apex], _shade(roofC, 1.04));
       // House gets a chimney; school gets a rooftop flag.
       if (b.typeId == 'house') {
         _chimney(canvas, x1 - 0.30, y0 + 0.16, h);
@@ -351,16 +372,19 @@ class CityGame extends FlameGame with TapCallbacks {
         _flag(canvas, apex);
       }
     } else {
-      _face(canvas, rim, _shade(style.roofColor, 1.06));
+      _face(canvas, rim, _shade(roofC, 1.06));
       // a slim parapet lip for depth
       final lip = 6.0;
       Offset l(int i) =>
           Offset(rim[i].dx, rim[i].dy - lip);
-      _face(canvas, [rim[1], rim[2], l(2), l(1)],
-          _shade(style.roofColor, 0.7));
-      _face(canvas, [rim[2], rim[3], l(3), l(2)],
-          _shade(style.roofColor, 0.85));
-      _face(canvas, [l(0), l(1), l(2), l(3)], _shade(style.roofColor, 1.12));
+      _face(canvas, [rim[1], rim[2], l(2), l(1)], _shade(roofC, 0.7));
+      _face(canvas, [rim[2], rim[3], l(3), l(2)], _shade(roofC, 0.85));
+      _face(canvas, [l(0), l(1), l(2), l(3)], _shade(roofC, 1.12));
+      // Factory: two short smokestacks on the roof.
+      if (b.typeId == 'factory') {
+        _smokestack(canvas, _iso(x0 + 0.30, y0 + 0.30, h));
+        _smokestack(canvas, _iso(x0 + 0.52, y0 + 0.26, h));
+      }
       // Skyscraper: a thin rooftop antenna.
       if (style.glass) {
         final cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
@@ -461,6 +485,28 @@ class CityGame extends FlameGame with TapCallbacks {
         _shade(brick, 0.85));
     _face(canvas, [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)],
         _shade(brick, 1.1));
+  }
+
+  /// A small, stable per-tile shade multiplier (~0.93–1.07) so identical
+  /// building types don't look cloned.
+  double _jitter(int gx, int gy) {
+    final h = ((gx * 49297) ^ (gy * 233280)) & 0x7fffffff;
+    return 0.93 + (h % 15) / 100.0;
+  }
+
+  /// A short factory smokestack rising from a roof point.
+  void _smokestack(Canvas canvas, Offset base) {
+    const w = 5.0, hgt = 18.0;
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(base.dx - w / 2, base.dy - hgt, w, hgt + 2),
+      const Radius.circular(2),
+    );
+    canvas.drawRRect(rect, Paint()..color = const Color(0xFFB6BCC6));
+    // red band near the top
+    canvas.drawRect(
+      Rect.fromLTWH(base.dx - w / 2, base.dy - hgt + 3, w, 3),
+      Paint()..color = const Color(0xFFEF476F),
+    );
   }
 
   /// A little pennant flag at a roof apex.
