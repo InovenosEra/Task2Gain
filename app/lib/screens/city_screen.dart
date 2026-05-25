@@ -60,6 +60,7 @@ class _CityScreenState extends State<CityScreen> {
   String? _armedType; // a type armed for placement (tap a tile to place)
   ({int x, int y})? _selectedCell; // a building selected for upgrade
   ({int x, int y})? _movingCell; // a building being relocated
+  bool _dragging = false; // dragging the selected building to a new tile
   int _lastCityLevel = -1;
   int? _levelUpBanner;
   Timer? _levelUpTimer;
@@ -396,19 +397,52 @@ class _CityScreenState extends State<CityScreen> {
           ),
         ),
 
-        // While a building is selected, a tap anywhere deselects it. The
-        // upgrade popup sits above this barrier and keeps its taps.
+        // While a building is selected: a tap anywhere deselects it, and a
+        // drag that starts on the selected building relocates it (dropping on
+        // an empty tile). The upgrade popup sits above and keeps its taps.
         if (_selectedCell != null)
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _deselect,
+              onPanStart: (d) {
+                final t = _game.tileAt(d.localPosition.dx, d.localPosition.dy);
+                final sel = _selectedCell;
+                if (t != null && sel != null && t.x == sel.x && t.y == sel.y) {
+                  setState(() => _dragging = true);
+                  _game.beginDrag();
+                  _game.updateDrag(d.localPosition.dx, d.localPosition.dy);
+                }
+              },
+              onPanUpdate: (d) {
+                if (_dragging) {
+                  _game.updateDrag(d.localPosition.dx, d.localPosition.dy);
+                }
+              },
+              onPanEnd: (_) {
+                if (!_dragging) return;
+                final from = _selectedCell;
+                final target = _game.endDrag();
+                final valid = from != null &&
+                    target != null &&
+                    (target.x != from.x || target.y != from.y) &&
+                    !_city.isOccupied(target.x, target.y);
+                setState(() {
+                  _dragging = false;
+                  if (valid) {
+                    _selectedCell = null;
+                    _game.setSelected(null, null);
+                  }
+                });
+                if (valid) _move(from.x, from.y, target.x, target.y);
+              },
             ),
           ),
 
         // Upgrade popup is in the OUTER stack so its position matches the
-        // game's (untransformed, full-screen) coordinates exactly.
-        if (_selectedCell != null) _upgradePopup(context),
+        // game's (untransformed, full-screen) coordinates exactly. Hidden
+        // while dragging the building.
+        if (_selectedCell != null && !_dragging) _upgradePopup(context),
       ],
     );
   }

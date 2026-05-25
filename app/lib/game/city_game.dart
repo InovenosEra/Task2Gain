@@ -40,6 +40,32 @@ class CityGame extends FlameGame with TapCallbacks {
     _selY = gy;
   }
 
+  // --- drag-to-move (driven from the screen's gesture layer) ---
+  int? _dragFromX;
+  int? _dragFromY;
+  Offset? _dragPos;
+
+  bool get isDragging => _dragFromX != null;
+
+  /// Begin dragging the currently selected building.
+  void beginDrag() {
+    _dragFromX = _selX;
+    _dragFromY = _selY;
+  }
+
+  void updateDrag(double px, double py) => _dragPos = Offset(px, py);
+
+  /// Finish the drag; returns the target cell under the pointer (or null).
+  ({int x, int y})? endDrag() {
+    final pos = _dragPos;
+    final ok = _dragFromX != null;
+    _dragFromX = null;
+    _dragFromY = null;
+    _dragPos = null;
+    if (!ok || pos == null) return null;
+    return tileAt(pos.dx, pos.dy);
+  }
+
   /// Screen-space point above the building at ([gx],[gy]) — where the screen
   /// layer anchors the upgrade popup. The GameWidget is full-screen and the
   /// canvas is untransformed, so these are screen pixels.
@@ -293,8 +319,11 @@ class CityGame extends FlameGame with TapCallbacks {
       }
     }
 
-    // Selected building: a pulsing ring on its tile.
-    if (_selX != null && _selY != null) {
+    final dragKey =
+        isDragging ? '${_dragFromX}_$_dragFromY' : null;
+
+    // Selected building: a pulsing ring on its tile (hidden while dragging).
+    if (_selX != null && _selY != null && dragKey == null) {
       final ring = _tilePath(
           _selX!.toDouble(), _selY!.toDouble(), _selX! + 1.0, _selY! + 1.0);
       final a = (0.6 + 0.4 * sin(_pulse * 4)).clamp(0.0, 1.0);
@@ -308,9 +337,11 @@ class CityGame extends FlameGame with TapCallbacks {
     }
 
     // Painter's algorithm: buildings + ambient scenery, far tiles first.
+    // The dragged building is drawn last (on top), following the pointer.
     final items = <_Drawable>[
       for (final b in _buildings)
-        _Drawable(b.gridX, b.gridY, () => _drawBuilding(canvas, b)),
+        if ('${b.gridX}_${b.gridY}' != dragKey)
+          _Drawable(b.gridX, b.gridY, () => _drawBuilding(canvas, b)),
     ];
     for (var x = 0; x < gridSize; x++) {
       for (var y = 0; y < gridSize; y++) {
@@ -324,6 +355,29 @@ class CityGame extends FlameGame with TapCallbacks {
     items.sort((a, b) => (a.gx + a.gy).compareTo(b.gx + b.gy));
     for (final it in items) {
       it.draw();
+    }
+
+    // Drag preview: a target highlight + the lifted building on top.
+    if (dragKey != null && _dragPos != null) {
+      final t = tileAt(_dragPos!.dx, _dragPos!.dy);
+      if (t != null && !occupied.contains('${t.x}_${t.y}')) {
+        final path =
+            _tilePath(t.x.toDouble(), t.y.toDouble(), t.x + 1.0, t.y + 1.0);
+        canvas.drawPath(path, Paint()..color = const Color(0x66FFD166));
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2
+            ..color = const Color(0xFF06D6A0),
+        );
+      }
+      for (final b in _buildings) {
+        if ('${b.gridX}_${b.gridY}' == dragKey) {
+          _drawBuilding(canvas, b);
+          break;
+        }
+      }
     }
 
     for (final c in _confetti) {
@@ -470,6 +524,18 @@ class CityGame extends FlameGame with TapCallbacks {
         pop == null ? 1.0 : _easeOutBack((pop / _popDur).clamp(0.0, 1.0));
     final anchor = _iso(b.gridX + 0.5, b.gridY + 1.0);
     final scaled = scale != 1.0;
+
+    // If this is the building being dragged, lift it to follow the pointer.
+    final dragging = _dragPos != null &&
+        b.gridX == _dragFromX &&
+        b.gridY == _dragFromY;
+    if (dragging) {
+      final center = _iso(b.gridX + 0.5, b.gridY + 0.5);
+      canvas.save();
+      canvas.translate(
+          _dragPos!.dx - center.dx, _dragPos!.dy - center.dy - 14);
+    }
+
     if (scaled) {
       canvas.save();
       canvas.translate(anchor.dx, anchor.dy);
@@ -499,6 +565,7 @@ class CityGame extends FlameGame with TapCallbacks {
     }
 
     if (scaled) canvas.restore();
+    if (dragging) canvas.restore();
   }
 
   /// Renders an AI-art sprite seated on its tile. The sprite is assumed to be
@@ -1200,17 +1267,23 @@ class CityGame extends FlameGame with TapCallbacks {
     return Color.fromARGB(255, ch(c.r), ch(c.g), ch(c.b));
   }
 
-  @override
-  void onTapDown(TapDownEvent event) {
-    final p = event.localPosition;
-    final dx = p.x - _origin.x;
-    final dy = p.y - _origin.y;
+  /// Inverse iso projection: which grid cell a screen point falls on (null if
+  /// outside the board). Shared by taps and drag-to-move.
+  ({int x, int y})? tileAt(double px, double py) {
+    final dx = px - _origin.x;
+    final dy = py - _origin.y;
     final u = dx / (tileW / 2); // gx - gy
     final v = dy / (tileH / 2); // gx + gy
     final gx = ((u + v) / 2).floor();
     final gy = ((v - u) / 2).floor();
-    if (gx < 0 || gy < 0 || gx >= gridSize || gy >= gridSize) return;
-    onCellTapped(gx, gy);
+    if (gx < 0 || gy < 0 || gx >= gridSize || gy >= gridSize) return null;
+    return (x: gx, y: gy);
+  }
+
+  @override
+  void onTapDown(TapDownEvent event) {
+    final t = tileAt(event.localPosition.x, event.localPosition.y);
+    if (t != null) onCellTapped(t.x, t.y);
   }
 }
 
