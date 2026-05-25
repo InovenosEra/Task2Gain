@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../game/building_catalog.dart';
 import '../game/city_game.dart';
@@ -143,6 +144,7 @@ class _CityScreenState extends State<CityScreen> {
     try {
       final result = await _cityService.placeBuilding(
           uid: widget.data.uid, typeId: typeId, gridX: gx, gridY: gy);
+      HapticFeedback.mediumImpact();
       _game.celebrate(gx, gy,
           xpGained: result.xpGained, bonusTokens: result.bonusTokens);
     } on StateError catch (e) {
@@ -167,6 +169,7 @@ class _CityScreenState extends State<CityScreen> {
     try {
       await _cityService.moveBuilding(
           uid: widget.data.uid, fromX: fromX, fromY: fromY, toX: toX, toY: toY);
+      HapticFeedback.selectionClick();
       _game.celebrate(toX, toY, xpGained: 0);
     } on StateError catch (e) {
       _toast(e.message);
@@ -209,6 +212,7 @@ class _CityScreenState extends State<CityScreen> {
     try {
       final refunded = await _cityService.removeBuilding(
           uid: widget.data.uid, gridX: cell.x, gridY: cell.y);
+      HapticFeedback.mediumImpact();
       _deselect();
       _toast('המבנה הוסר · +$refunded אסימונים');
     } on StateError catch (e) {
@@ -224,6 +228,7 @@ class _CityScreenState extends State<CityScreen> {
     try {
       final result = await _cityService.upgradeBuilding(
           uid: widget.data.uid, gridX: cell.x, gridY: cell.y);
+      HapticFeedback.mediumImpact();
       _game.celebrate(cell.x, cell.y,
           xpGained: result.xpGained, bonusTokens: result.bonusTokens);
     } on StateError catch (e) {
