@@ -37,6 +37,7 @@ class CityGame extends FlameGame with TapCallbacks {
   // --- juice / effects ---
   final List<_FloatText> _floats = [];
   final List<_Confetti> _confetti = [];
+  final List<_Cloud> _clouds = [];
   final Map<String, double> _pop = {}; // 'gx_gy' -> elapsed seconds
   final Random _rand = Random();
   static const double _popDur = 0.45;
@@ -143,6 +144,10 @@ class CityGame extends FlameGame with TapCallbacks {
       c.age += dt;
     }
     _confetti.removeWhere((c) => c.age > c.life);
+    for (final cl in _clouds) {
+      cl.x += cl.speed * dt;
+      if (cl.x - 70 * cl.scale > size.x) cl.x = -70 * cl.scale;
+    }
   }
 
   @override
@@ -153,6 +158,16 @@ class CityGame extends FlameGame with TapCallbacks {
     super.onGameResize(size);
     // Centre the diamond horizontally; leave headroom up top for tall builds.
     _origin = Vector2(size.x / 2, size.y * 0.22);
+    if (_clouds.isEmpty) {
+      for (var i = 0; i < 5; i++) {
+        _clouds.add(_Cloud(
+          x: _rand.nextDouble() * size.x,
+          y: 20 + _rand.nextDouble() * size.y * 0.32,
+          scale: 0.7 + _rand.nextDouble() * 0.8,
+          speed: 6 + _rand.nextDouble() * 10,
+        ));
+      }
+    }
   }
 
   Offset _iso(num gx, num gy, [double lift = 0]) => Offset(
@@ -164,6 +179,9 @@ class CityGame extends FlameGame with TapCallbacks {
   void render(Canvas canvas) {
     super.render(canvas);
     _drawSky(canvas);
+    for (final cl in _clouds) {
+      _drawCloud(canvas, cl);
+    }
     _drawGround(canvas);
 
     // Painter's algorithm: buildings + ambient scenery, far tiles first.
@@ -192,6 +210,24 @@ class CityGame extends FlameGame with TapCallbacks {
     for (final f in _floats) {
       _drawFloat(canvas, f);
     }
+  }
+
+  void _drawCloud(Canvas canvas, _Cloud cl) {
+    final s = cl.scale;
+    final paint = Paint()..color = const Color(0xCCFFFFFF);
+    void puff(double dx, double dy, double r) =>
+        canvas.drawCircle(Offset(cl.x + dx * s, cl.y + dy * s), r * s, paint);
+    puff(0, 0, 16);
+    puff(18, 4, 13);
+    puff(-18, 5, 12);
+    puff(8, -8, 12);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(cl.x - 26 * s, cl.y + 4 * s, 54 * s, 12 * s),
+        Radius.circular(8 * s),
+      ),
+      paint,
+    );
   }
 
   void _drawSky(Canvas canvas) {
@@ -832,6 +868,15 @@ enum _Roof { pyramid, flat, dome, none }
 enum _Kind { building, road, park, decor }
 
 enum _SceneryKind { bush, flowers, rock }
+
+/// A slow background cloud puff that drifts across the sky and wraps around.
+class _Cloud {
+  _Cloud({required this.x, required this.y, required this.scale, required this.speed});
+  double x;
+  final double y;
+  final double scale;
+  final double speed;
+}
 
 /// A depth-sortable draw call (buildings + ambient scenery share one pass).
 class _Drawable {
