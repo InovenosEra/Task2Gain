@@ -89,6 +89,7 @@ class CityGame extends FlameGame with TapCallbacks {
         roof: _Roof.flat, roofColor: Color(0xFFB7AE97), baseH: 32, perLevel: 14),
     'park': _Style(roof: _Roof.none, roofColor: Color(0xFF57C9A0), kind: _Kind.park),
     'decor': _Style(roof: _Roof.none, roofColor: Color(0xFFF4B942), kind: _Kind.decor),
+    'fountain': _Style(roof: _Roof.none, roofColor: Color(0xFF8FD3F2), kind: _Kind.decor),
     'road': _Style(roof: _Roof.none, roofColor: Color(0xFFAEB4C0), kind: _Kind.road),
   };
 
@@ -411,7 +412,11 @@ class CityGame extends FlameGame with TapCallbacks {
         case _Kind.park:
           _drawPark(canvas, b);
         case _Kind.decor:
-          _drawDecor(canvas, b);
+          if (b.typeId == 'fountain') {
+            _drawFountain(canvas, b);
+          } else {
+            _drawDecor(canvas, b);
+          }
         case _Kind.building:
           _drawTower(canvas, b, style);
       }
@@ -815,6 +820,19 @@ class CityGame extends FlameGame with TapCallbacks {
     );
     _tree(canvas, _iso(x + 0.34, y + 0.36), 1.0);
     _tree(canvas, _iso(x + 0.62, y + 0.3), 0.78);
+    // a little bench near the front
+    final bench = _iso(x + 0.4, y + 0.72);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: bench, width: 16, height: 4),
+        const Radius.circular(2),
+      ),
+      Paint()..color = const Color(0xFF9B6B43),
+    );
+    canvas.drawRect(Rect.fromLTWH(bench.dx - 7, bench.dy - 5, 2, 5),
+        Paint()..color = const Color(0xFF7E5836));
+    canvas.drawRect(Rect.fromLTWH(bench.dx + 5, bench.dy - 5, 2, 5),
+        Paint()..color = const Color(0xFF7E5836));
   }
 
   void _tree(Canvas canvas, Offset baseTop, double s) {
@@ -942,6 +960,37 @@ class CityGame extends FlameGame with TapCallbacks {
         canvas.drawCircle(
             Offset(c.dx, c.dy - 12), 3.2, Paint()..color = const Color(0xFFF1C9A5));
     }
+  }
+
+  /// A plaza fountain: stone basin, blue water, a central tier, and a jet.
+  void _drawFountain(Canvas canvas, PlacedBuilding b) {
+    final x = b.gridX, y = b.gridY;
+    final c = _iso(x + 0.5, y + 0.5);
+    _contactShadow(canvas, x + 0.2, y + 0.2, x + 0.8, y + 0.8, alpha: 0x22);
+    // basin rim (stone) + water
+    canvas.drawOval(
+      Rect.fromCenter(center: c, width: tileW * 0.6, height: tileH * 0.7),
+      Paint()..color = const Color(0xFFCBD2DC),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: c, width: tileW * 0.46, height: tileH * 0.52),
+      Paint()..color = const Color(0xFF8FD3F2),
+    );
+    // central pedestal + upper bowl
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(c.dx, c.dy - 6), width: 5, height: 12),
+      Paint()..color = const Color(0xFFCBD2DC),
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(c.dx, c.dy - 11), width: 16, height: 6),
+      Paint()..color = const Color(0xFFD7DDE6),
+    );
+    // water jet
+    canvas.drawLine(Offset(c.dx, c.dy - 12), Offset(c.dx, c.dy - 22),
+        Paint()..color = const Color(0xFFBFE3FF)..strokeWidth = 2);
+    canvas.drawCircle(Offset(c.dx, c.dy - 23), 2.5,
+        Paint()..color = const Color(0xFFEAF6FF));
   }
 
   void _contactShadow(Canvas canvas, num x0, num y0, num x1, num y1,

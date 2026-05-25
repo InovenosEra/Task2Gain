@@ -38,6 +38,7 @@ const List<BuildingType> kBuildingCatalog = [
   BuildingType(id: 'hospital',  displayName: 'בית חולים', icon: '🏥', baseTokenCost: 40, baseXpReward: 34),
   BuildingType(id: 'cafe',      displayName: 'בית קפה',  icon: '☕', baseTokenCost: 18, baseXpReward: 14),
   BuildingType(id: 'bank',      displayName: 'בנק',      icon: '🏦', baseTokenCost: 50, baseXpReward: 44),
+  BuildingType(id: 'fountain',  displayName: 'מזרקה',    icon: '⛲', baseTokenCost: 12, baseXpReward: 8),
   BuildingType(id: 'decor',     displayName: 'קישוט',   icon: '🗿', baseTokenCost: 4,  baseXpReward: 2),
   BuildingType(id: 'road',      displayName: 'כביש',    icon: '🛣️', baseTokenCost: 2,  baseXpReward: 1),
 ];
