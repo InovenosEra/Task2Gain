@@ -77,6 +77,12 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Little City building sprites. Drop AI-generated PNGs named <id>.png
+  # (house.png, shop.png, …) here; the CityGame loads them by type id and
+  # falls back to canvas-drawn art for any that are missing.
+  assets:
+    - assets/city/
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

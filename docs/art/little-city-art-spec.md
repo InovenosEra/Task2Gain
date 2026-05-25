@@ -68,15 +68,17 @@ Decide per-building; you can mix (e.g., houses get 3 tiers, roads stay 1).
 
 ---
 
-## 6. How these wire into the game (my side)
+## 6. How these wire into the game — ✅ DONE (pipeline is live)
 
-Once you drop PNGs into `app/assets/city/`, I will:
-1. Register the folder in `pubspec.yaml` under `flutter/assets`.
-2. In `CityGame.onLoad`, preload sprites via Flame's `images.load` / `Sprite`, keyed by `typeId` (+ level if tiered).
-3. Replace `_drawBuilding`'s canvas extrusion with `sprite.render`, anchored so the sprite's base sits on the tile's center and it scales to `tileW`. Depth-sort stays the same (by `gx+gy`).
-4. Keep the placeholder block as a fallback for any missing sprite, so a partial asset set still runs.
+The sprite pipeline is implemented and verified (2026-05-26). **To activate real art, just drop PNGs into `app/assets/city/` named `<id>.png`** (`house.png`, `shop.png`, … matching `building_catalog.dart` ids) and relaunch the app (a full `flutter run`, not just hot reload — Flutter only re-bundles assets on a fresh launch).
 
-You don't need all 8 to see progress — even `house.png` alone will show a real sprite in the city next to placeholder blocks.
+What's already wired:
+1. `app/pubspec.yaml` registers `assets/city/` under `flutter/assets`.
+2. `CityGame.onLoad` preloads each catalog id from `assets/city/<id>.png` via a Flame `Images(prefix: 'assets/city/')` cache into `_sprites`. Missing files are swallowed (expected).
+3. `_drawBuilding` renders `_sprites[typeId]` when present (`_drawSprite`: anchored bottom-centre to the tile centre, scaled to ~`1.9·tileW`, `levelScale` grows it per level, soft contact shadow, level badge on top). Depth-sort by `gx+gy` is unchanged.
+4. **Any missing sprite falls back to the canvas-drawn art** (cream walls + windows + pyramid/flat roofs, road/park/decor features), so a partial set still runs — you don't need all 8 at once. Even `house.png` alone shows a real sprite next to canvas buildings.
+
+Tuning notes for when real art lands: assets are assumed **square** with the building centred and its base around the middle (§1). If buildings sit too high/low or too big/small, adjust the `size` (`tileW * 1.9`) and the `contact.dy + tileH * 0.5` seat offset in `CityGame._drawSprite`.
 
 ---
 

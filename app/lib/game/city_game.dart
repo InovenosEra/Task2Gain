@@ -1,9 +1,12 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flame/cache.dart';
+import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 
+import 'building_catalog.dart';
 import '../models/city.dart';
 
 /// Flame game that renders the isometric Little City with placeholder
@@ -20,6 +23,11 @@ class CityGame extends FlameGame with TapCallbacks {
   final int gridSize;
 
   List<PlacedBuilding> _buildings = const [];
+
+  /// Sprites keyed by building type id, loaded from `assets/city/<id>.png`.
+  /// Any type without a sprite falls back to the canvas-drawn art below, so
+  /// a partial art set still runs.
+  final Map<String, Sprite> _sprites = {};
 
   static const double tileW = 60;
   static const double tileH = 30;
@@ -40,21 +48,48 @@ class CityGame extends FlameGame with TapCallbacks {
     Color(0xFFFF8B6B),
   ];
 
-  /// Placeholder colours per building type id (roof / left / right faces
-  /// are derived from this base).
-  static const Map<String, int> _typeColor = {
-    'house': 0xFFFF8B6B,
-    'shop': 0xFF2BB7A3,
-    'park': 0xFF57C9A0,
-    'school': 0xFF7C83FF,
-    'factory': 0xFF9AA3B2,
-    'apartment': 0xFFB06BFF,
-    'decor': 0xFFF4B942,
-    'road': 0xFFAEB4C0,
+  /// Cozy mobile-game palette (Township / Clash vibe): cream walls + one
+  /// roof accent per building, sky-blue glass windows.
+  static const Color _wall = Color(0xFFF6F1E7);
+  static const Color _glass = Color(0xFFBFE3FF);
+
+  /// Per-type render style. Roof accent colours follow the art spec.
+  static const Map<String, _Style> _styles = {
+    'house': _Style(
+        roof: _Roof.pyramid, roofColor: Color(0xFFFF8B6B), baseH: 26, perLevel: 14),
+    'shop': _Style(
+        roof: _Roof.flat, roofColor: Color(0xFF2BB7A3), baseH: 22, perLevel: 10),
+    'school': _Style(
+        roof: _Roof.pyramid, roofColor: Color(0xFF7C83FF), baseH: 30, perLevel: 16),
+    'factory': _Style(
+        roof: _Roof.flat, roofColor: Color(0xFFF4B942), baseH: 26, perLevel: 12),
+    'apartment': _Style(
+        roof: _Roof.flat, roofColor: Color(0xFF57C9A0), baseH: 38, perLevel: 18),
+    'park': _Style(roof: _Roof.none, roofColor: Color(0xFF57C9A0), kind: _Kind.park),
+    'decor': _Style(roof: _Roof.none, roofColor: Color(0xFFF4B942), kind: _Kind.decor),
+    'road': _Style(roof: _Roof.none, roofColor: Color(0xFFAEB4C0), kind: _Kind.road),
   };
+
+  static const _Style _fallback =
+      _Style(roof: _Roof.flat, roofColor: Color(0xFFBBBBBB));
 
   void setBuildings(List<PlacedBuilding> buildings) {
     _buildings = buildings;
+  }
+
+  @override
+  Future<void> onLoad() async {
+    // Preload any building sprites that ship in assets/city/. Missing files
+    // are expected (canvas art covers them), so failures are swallowed.
+    final cityImages = Images(prefix: 'assets/city/');
+    for (final type in kBuildingCatalog) {
+      try {
+        final image = await cityImages.load('${type.id}.png');
+        _sprites[type.id] = Sprite(image);
+      } catch (_) {
+        // No sprite for this type yet — the canvas fallback handles it.
+      }
+    }
   }
 
   /// Plays the build/upgrade feedback at a cell: a pop-in, a rising "+XP",
@@ -187,41 +222,228 @@ class CityGame extends FlameGame with TapCallbacks {
       canvas.translate(-anchor.dx, -anchor.dy);
     }
 
-    final baseColor = Color(_typeColor[b.typeId] ?? 0xFFBBBBBB);
-    final h = 22.0 + (b.level - 1) * 16.0;
-    const inset = 0.12;
+    final sprite = _sprites[b.typeId];
+    if (sprite != null) {
+      _drawSprite(canvas, b, sprite);
+    } else {
+      final style = _styles[b.typeId] ?? _fallback;
+      switch (style.kind) {
+        case _Kind.road:
+          _drawRoad(canvas, b);
+        case _Kind.park:
+          _drawPark(canvas, b);
+        case _Kind.decor:
+          _drawDecor(canvas, b);
+        case _Kind.building:
+          _drawTower(canvas, b, style);
+      }
+    }
+
+    if (scaled) canvas.restore();
+  }
+
+  /// Renders an AI-art sprite seated on its tile. The sprite is assumed to be
+  /// a square asset with the building centered and its base around the middle
+  /// (per the art spec); we anchor its bottom-centre to the tile centre and
+  /// scale to the tile so 1×1 buildings line up on the grid. Tunable once the
+  /// real assets land.
+  void _drawSprite(Canvas canvas, PlacedBuilding b, Sprite sprite) {
+    final contact = _iso(b.gridX + 0.5, b.gridY + 0.5);
+    final levelScale = 1 + (b.level - 1) * 0.12;
+    final w = tileW * 1.9 * levelScale;
+    final size = Vector2(w, w); // square assets
+    // Soft contact shadow under the sprite.
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(contact.dx, contact.dy + 2),
+          width: tileW * 0.7,
+          height: tileH * 0.6),
+      Paint()..color = const Color(0x33000000),
+    );
+    // Seat the base slightly below the tile centre so it sits on the ground.
+    sprite.render(
+      canvas,
+      position: Vector2(contact.dx, contact.dy + tileH * 0.5),
+      size: size,
+      anchor: Anchor.bottomCenter,
+    );
+    if (b.level > 1) {
+      _drawLevelBadge(
+          canvas, Offset(contact.dx, contact.dy - w * 0.6), b.level);
+    }
+  }
+
+  /// A walled building with windows and a pyramid or flat roof.
+  void _drawTower(Canvas canvas, PlacedBuilding b, _Style style) {
+    final h = style.baseH + (b.level - 1) * style.perLevel;
+    const inset = 0.14;
     final x0 = b.gridX + inset, x1 = b.gridX + 1 - inset;
     final y0 = b.gridY + inset, y1 = b.gridY + 1 - inset;
 
-    // Contact shadow.
-    final shadow = Path()
-      ..moveTo(_iso(x0, y0).dx, _iso(x0, y0).dy)
-      ..lineTo(_iso(x1, y0).dx, _iso(x1, y0).dy)
-      ..lineTo(_iso(x1, y1).dx, _iso(x1, y1).dy)
-      ..lineTo(_iso(x0, y1).dx, _iso(x0, y1).dy)
-      ..close();
-    canvas.drawPath(shadow, Paint()..color = const Color(0x33000000));
+    _contactShadow(canvas, x0, y0, x1, y1);
 
     Offset c(num gx, num gy) => _iso(gx, gy); // base
-    Offset t(num gx, num gy) => _iso(gx, gy, h); // top
+    Offset t(num gx, num gy) => _iso(gx, gy, h); // wall top
 
-    // Right wall (darker).
+    // Right wall (in shadow) + front-right wall (mid).
     _face(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
-        _shade(baseColor, 0.62));
-    // Front-right wall.
+        _shade(_wall, 0.74));
     _face(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
-        _shade(baseColor, 0.78));
-    // Roof (lightest).
-    _face(canvas, [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)],
-        _shade(baseColor, 1.12));
+        _shade(_wall, 0.88));
 
-    // Level badge for upgraded buildings.
+    // Windows: more rows the taller it is.
+    final rows = (h / 16).round().clamp(1, 5);
+    _windows(canvas, c(x1, y0), c(x1, y1), t(x1, y0), t(x1, y1), 2, rows,
+        _shade(_glass, 0.82));
+    _windows(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 2, rows,
+        _glass);
+
+    // Roof.
+    final rim = [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)];
+    if (style.roof == _Roof.pyramid) {
+      final cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+      final roofH = h * 0.5 + 18;
+      final apex = _iso(cx, cy, h + roofH);
+      // back/left (bright), right (dark), front (mid), left (mid-bright)
+      _face(canvas, [rim[0], rim[1], apex], _shade(style.roofColor, 1.12));
+      _face(canvas, [rim[1], rim[2], apex], _shade(style.roofColor, 0.74));
+      _face(canvas, [rim[2], rim[3], apex], _shade(style.roofColor, 0.94));
+      _face(canvas, [rim[3], rim[0], apex], _shade(style.roofColor, 1.04));
+    } else {
+      _face(canvas, rim, _shade(style.roofColor, 1.06));
+      // a slim parapet lip for depth
+      final lip = 6.0;
+      Offset l(int i) =>
+          Offset(rim[i].dx, rim[i].dy - lip);
+      _face(canvas, [rim[1], rim[2], l(2), l(1)],
+          _shade(style.roofColor, 0.7));
+      _face(canvas, [rim[2], rim[3], l(3), l(2)],
+          _shade(style.roofColor, 0.85));
+      _face(canvas, [l(0), l(1), l(2), l(3)], _shade(style.roofColor, 1.12));
+    }
+
     if (b.level > 1) {
       final top = _iso(b.gridX + 0.5, b.gridY + 0.5, h);
       _drawLevelBadge(canvas, Offset(top.dx, top.dy - 6), b.level);
     }
+  }
 
-    if (scaled) canvas.restore();
+  /// A flat asphalt tile with a dashed centerline.
+  void _drawRoad(Canvas canvas, PlacedBuilding b) {
+    final x = b.gridX, y = b.gridY;
+    final path = _tilePath(x.toDouble(), y.toDouble(), x + 1.0, y + 1.0);
+    canvas.drawPath(path, Paint()..color = const Color(0xFF9BA1AD));
+    // sidewalk inset
+    final inner = _tilePath(x + 0.12, y + 0.12, x + 0.88, y + 0.88);
+    canvas.drawPath(inner, Paint()..color = const Color(0xFFB7BCC7));
+    // dashed centerline along the gx axis
+    final a = _iso(x + 0.5, y + 0.12);
+    final bEnd = _iso(x + 0.5, y + 0.88);
+    final dash = Paint()
+      ..color = const Color(0xFFFFFFFF)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    for (var s = 0.0; s < 1.0; s += 0.34) {
+      final p1 = Offset.lerp(a, bEnd, s)!;
+      final p2 = Offset.lerp(a, bEnd, (s + 0.17).clamp(0.0, 1.0))!;
+      canvas.drawLine(p1, p2, dash);
+    }
+  }
+
+  /// A grassy park tile: two trees and a little pond.
+  void _drawPark(Canvas canvas, PlacedBuilding b) {
+    final x = b.gridX, y = b.gridY;
+    _contactShadow(canvas, x + 0.1, y + 0.1, x + 0.9, y + 0.9, alpha: 0x18);
+    // pond
+    final pondC = _iso(x + 0.66, y + 0.66);
+    canvas.drawOval(
+      Rect.fromCenter(center: pondC, width: tileW * 0.42, height: tileH * 0.5),
+      Paint()..color = const Color(0xFF8FD3F2),
+    );
+    _tree(canvas, _iso(x + 0.34, y + 0.36), 1.0);
+    _tree(canvas, _iso(x + 0.62, y + 0.3), 0.78);
+  }
+
+  void _tree(Canvas canvas, Offset baseTop, double s) {
+    // trunk
+    canvas.drawRect(
+      Rect.fromCenter(
+          center: Offset(baseTop.dx, baseTop.dy - 6 * s),
+          width: 5 * s,
+          height: 14 * s),
+      Paint()..color = const Color(0xFF9B6B43),
+    );
+    // foliage (two stacked blobs, lit from upper-left)
+    canvas.drawCircle(Offset(baseTop.dx, baseTop.dy - 18 * s), 12 * s,
+        Paint()..color = const Color(0xFF4FB477));
+    canvas.drawCircle(Offset(baseTop.dx - 4 * s, baseTop.dy - 24 * s), 8 * s,
+        Paint()..color = const Color(0xFF6FCB90));
+  }
+
+  /// A small plaza statue: cream pedestal + accent sphere.
+  void _drawDecor(Canvas canvas, PlacedBuilding b) {
+    final x = b.gridX, y = b.gridY;
+    _contactShadow(canvas, x + 0.3, y + 0.3, x + 0.7, y + 0.7, alpha: 0x22);
+    const inset = 0.34;
+    final x0 = x + inset, x1 = x + 1 - inset;
+    final y0 = y + inset, y1 = y + 1 - inset;
+    const h = 16.0;
+    Offset c(num gx, num gy) => _iso(gx, gy);
+    Offset t(num gx, num gy) => _iso(gx, gy, h);
+    _face(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
+        _shade(_wall, 0.74));
+    _face(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
+        _shade(_wall, 0.88));
+    _face(canvas, [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)],
+        _shade(_wall, 1.1));
+    final top = _iso((x0 + x1) / 2, (y0 + y1) / 2, h);
+    canvas.drawCircle(Offset(top.dx, top.dy - 10), 9,
+        Paint()..color = const Color(0xFFF4B942));
+    canvas.drawCircle(Offset(top.dx - 3, top.dy - 13), 4,
+        Paint()..color = const Color(0xFFFFD98A));
+  }
+
+  void _contactShadow(Canvas canvas, num x0, num y0, num x1, num y1,
+      {int alpha = 0x33}) {
+    canvas.drawPath(_tilePath(x0.toDouble(), y0.toDouble(), x1.toDouble(),
+        y1.toDouble()), Paint()..color = Color(alpha << 24));
+  }
+
+  Path _tilePath(double x0, double y0, double x1, double y1) => Path()
+    ..moveTo(_iso(x0, y0).dx, _iso(x0, y0).dy)
+    ..lineTo(_iso(x1, y0).dx, _iso(x1, y0).dy)
+    ..lineTo(_iso(x1, y1).dx, _iso(x1, y1).dy)
+    ..lineTo(_iso(x0, y1).dx, _iso(x0, y1).dy)
+    ..close();
+
+  /// Draws a grid of glass windows on a wall face, defined by its four
+  /// corners (base A→B along the bottom, top A→B along the top). Uses
+  /// bilinear interpolation so windows sit correctly on the skewed iso face.
+  void _windows(Canvas canvas, Offset baseA, Offset baseB, Offset topA,
+      Offset topB, int cols, int rows, Color color) {
+    Offset at(double u, double v) =>
+        Offset.lerp(Offset.lerp(baseA, baseB, u)!,
+            Offset.lerp(topA, topB, u)!, v)!;
+    const padU = 0.12, padV = 0.12; // margins inside the face
+    final spanU = (1 - 2 * padU) / cols;
+    final spanV = (1 - 2 * padV) / rows;
+    const gapU = 0.22, gapV = 0.26; // fraction of cell that is gap
+    final paint = Paint()..color = color;
+    for (var i = 0; i < cols; i++) {
+      for (var j = 0; j < rows; j++) {
+        final u0 = padU + i * spanU + spanU * gapU / 2;
+        final u1 = padU + (i + 1) * spanU - spanU * gapU / 2;
+        final v0 = padV + j * spanV + spanV * gapV / 2;
+        final v1 = padV + (j + 1) * spanV - spanV * gapV / 2;
+        final path = Path()
+          ..moveTo(at(u0, v0).dx, at(u0, v0).dy)
+          ..lineTo(at(u1, v0).dx, at(u1, v0).dy)
+          ..lineTo(at(u1, v1).dx, at(u1, v1).dy)
+          ..lineTo(at(u0, v1).dx, at(u0, v1).dy)
+          ..close();
+        canvas.drawPath(path, paint);
+      }
+    }
   }
 
   double _easeOutBack(double t) {
@@ -323,6 +545,29 @@ class CityGame extends FlameGame with TapCallbacks {
     if (gx < 0 || gy < 0 || gx >= gridSize || gy >= gridSize) return;
     onCellTapped(gx, gy);
   }
+}
+
+enum _Roof { pyramid, flat, none }
+
+enum _Kind { building, road, park, decor }
+
+/// Render recipe for a building type: roof shape + accent colour, base height
+/// and per-level growth. [kind] selects a special ground feature (road/park/
+/// decor) over the default walled [building].
+class _Style {
+  const _Style({
+    required this.roof,
+    required this.roofColor,
+    this.baseH = 26,
+    this.perLevel = 14,
+    this.kind = _Kind.building,
+  });
+
+  final _Roof roof;
+  final Color roofColor;
+  final double baseH;
+  final double perLevel;
+  final _Kind kind;
 }
 
 class _FloatText {

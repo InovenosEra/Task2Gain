@@ -96,6 +96,23 @@ void main() {
     );
   });
 
+  test('renameCity stores a trimmed, capped name without touching buildings',
+      () async {
+    await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
+
+    await service.renameCity('kid1', '  סאניוויל  ');
+    var c = City.fromDoc(
+        'kid1', (await db.collection('cities').doc('kid1').get()).data());
+    expect(c.name, 'סאניוויל');
+    expect(c.buildings.length, 1); // merge preserved the building
+
+    // Caps to 24 chars.
+    await service.renameCity('kid1', 'א' * 40);
+    c = City.fromDoc(
+        'kid1', (await db.collection('cities').doc('kid1').get()).data());
+    expect(c.name.length, 24);
+  });
+
   test('placeBuilding preserves lifetimeEarned.tokens', () async {
     await db.collection('wallets').doc('kid1').set({
       'lifetimeEarned': {'points': 5, 'money': 0, 'tokens': 7},

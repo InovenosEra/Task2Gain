@@ -23,6 +23,21 @@ void main() {
     expect(c.isOccupied(5, 5), isFalse);
   });
 
+  test('displayName falls back to a stable default when unnamed', () {
+    final a = City.fromDoc('u1', null);
+    final b = City.fromDoc('u1', {'buildings': []});
+    expect(a.name, isEmpty);
+    expect(a.displayName, isNotEmpty);
+    // Deterministic: same uid => same default name.
+    expect(a.displayName, b.displayName);
+  });
+
+  test('displayName prefers the chosen name (trimmed)', () {
+    final c = City.fromDoc('u1', {'name': '  סאניוויל  ', 'buildings': []});
+    expect(c.name, '  סאניוויל  ');
+    expect(c.displayName, 'סאניוויל');
+  });
+
   test('PlacedBuilding toMap matches schema', () {
     const b = PlacedBuilding(typeId: 'park', gridX: 3, gridY: 4, level: 1);
     expect(b.toMap(), {'type': 'park', 'gridX': 3, 'gridY': 4, 'level': 1});

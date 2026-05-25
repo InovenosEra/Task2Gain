@@ -149,6 +149,17 @@ class CityService {
     });
   }
 
+  /// Renames the city. Trimmed; capped to a sane length. Stored alongside the
+  /// buildings on the same city doc (merge so buildings are untouched).
+  Future<void> renameCity(String uid, String name) {
+    final clean = name.trim();
+    final capped = clean.length > 24 ? clean.substring(0, 24) : clean;
+    return _cityRef(uid).set(
+      {'uid': uid, 'name': capped},
+      SetOptions(merge: true),
+    );
+  }
+
   Stream<City> watchCity(String uid) =>
       _cityRef(uid).snapshots().map((s) => City.fromDoc(uid, s.data()));
 }
