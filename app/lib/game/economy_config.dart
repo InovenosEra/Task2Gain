@@ -20,6 +20,9 @@ const double kSurpriseChance = 0.25;
 /// Bonus tokens awarded when a surprise triggers.
 const int kSurpriseBonusTokens = 5;
 
+/// Tokens granted by the once-per-day login reward.
+const int kDailyRewardTokens = 15;
+
 /// City level for a given total city value (level 1 at value 0).
 int cityLevelForValue(int cityValue) => 1 + (cityValue ~/ kCityValuePerLevel);
 

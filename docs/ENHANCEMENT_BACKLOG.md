@@ -7,14 +7,14 @@ in AUTONOMOUS_PROGRESS.md. Safe-only: no main, no force-push, no deploys, no
 prod writes, no destructive ops.
 
 ## Polish / feel
-- [ ] Haptic feedback on successful build / upgrade / move / remove.
-- [ ] Large-number formatting for HUD counts (1,234 / 12.3K).
+- [x] Haptic feedback on successful build / upgrade / move / remove.
+- [x] Large-number formatting for HUD counts (1,234 / 12.3K).
 - [ ] Animate currency chips with a brief pulse/flash when they increase.
 - [ ] Accessibility: Semantics labels on icon-only buttons (gear, rail, build, +).
 - [ ] Pause the Flame game when the app is backgrounded (lifecycle).
 
 ## Gameplay
-- [ ] Daily reward: once-per-day token bonus with a claim popup (date-guarded; TDD).
+- [x] Daily reward: once-per-day token bonus with a claim popup (date-guarded; TDD).
 - [ ] City stats sheet: building count, city value, breakdown by type (read-only).
 - [ ] Prize/milestone teaser tying city level to the existing reward system.
 - [ ] Quest shortcut: surface count of tasks ready to claim near the rail.

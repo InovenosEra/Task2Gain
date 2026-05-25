@@ -63,6 +63,7 @@ class _CityScreenState extends State<CityScreen> {
   ({int x, int y})? _selectedCell; // a building selected for upgrade
   ({int x, int y})? _movingCell; // a building being relocated
   bool _dragging = false; // dragging the selected building to a new tile
+  bool _dailyAvailable = false; // daily reward ready to claim
   int _lastCityLevel = -1;
   int? _levelUpBanner;
   Timer? _levelUpTimer;
@@ -95,6 +96,25 @@ class _CityScreenState extends State<CityScreen> {
       _lastCityLevel = level;
       if (mounted) setState(() {});
     });
+    // Surface the daily reward if it hasn't been claimed today.
+    _cityService.isDailyRewardAvailable(widget.data.uid).then((available) {
+      if (available && mounted) setState(() => _dailyAvailable = true);
+    });
+  }
+
+  Future<void> _claimDaily() async {
+    try {
+      final amount = await _cityService.claimDailyReward(widget.data.uid);
+      if (!mounted) return;
+      setState(() => _dailyAvailable = false);
+      if (amount > 0) {
+        _game.burstConfetti();
+        HapticFeedback.mediumImpact();
+        _toast('🎁 בונוס יומי · +$amount אסימונים');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _dailyAvailable = false);
+    }
   }
 
   @override
@@ -645,6 +665,46 @@ class _CityScreenState extends State<CityScreen> {
                       const SizedBox(height: 4),
                       Text('הקישו על «בנייה» ואז על משבצת ריקה',
                           style: bodyFont(size: 12, color: Colors.white70)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+        // Daily reward: a tappable banner to collect once per day.
+        if (_dailyAvailable && _movingCell == null && _selectedCell == null)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 70,
+            child: Center(
+              child: ScaleTap(
+                onTap: _claimDaily,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [AppPalette.green, AppPalette.sky]),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                          color: AppPalette.green.withValues(alpha: 0.5),
+                          blurRadius: 14,
+                          offset: const Offset(0, 5)),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🎁', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 8),
+                      Text('בונוס יומי! הקישו לאיסוף',
+                          style: displayFont(
+                              size: 14,
+                              weight: FontWeight.w900,
+                              color: Colors.white)),
                     ],
                   ),
                 ),

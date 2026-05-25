@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:task2play/game/economy_config.dart';
 import 'package:task2play/models/city.dart';
 import 'package:task2play/services/city_service.dart';
 
@@ -166,6 +167,33 @@ void main() {
     c = City.fromDoc(
         'kid1', (await db.collection('cities').doc('kid1').get()).data());
     expect(c.name.length, 24);
+  });
+
+  test('claimDailyReward grants once per day, then is unavailable', () async {
+    var day = DateTime(2026, 5, 26, 9);
+    final svc = CityService(firestore: db, rng: () => 1.0, clock: () => day);
+
+    expect(await svc.isDailyRewardAvailable('kid1'), isTrue);
+    final first = await svc.claimDailyReward('kid1');
+    expect(first, kDailyRewardTokens);
+    expect(
+        (await db.collection('wallets').doc('kid1').get()).data()!['tokens'],
+        100 + kDailyRewardTokens);
+
+    // Same day: unavailable, no further grant.
+    expect(await svc.isDailyRewardAvailable('kid1'), isFalse);
+    expect(await svc.claimDailyReward('kid1'), 0);
+    expect(
+        (await db.collection('wallets').doc('kid1').get()).data()!['tokens'],
+        100 + kDailyRewardTokens);
+
+    // Next day: available again.
+    day = DateTime(2026, 5, 27, 9);
+    expect(await svc.isDailyRewardAvailable('kid1'), isTrue);
+    expect(await svc.claimDailyReward('kid1'), kDailyRewardTokens);
+    expect(
+        (await db.collection('wallets').doc('kid1').get()).data()!['tokens'],
+        100 + 2 * kDailyRewardTokens);
   });
 
   test('placeBuilding preserves lifetimeEarned.tokens', () async {

@@ -3,4 +3,13 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Daily reward** — once-per-day +15 token bonus, date-guarded, injectable
+  clock; TDD'd `CityService.claimDailyReward`/`isDailyRewardAvailable`. Tappable
+  green banner on the city; confetti + haptic on claim. Verified banner on sim.
+  60 tests. (commit pending)
+- **Number formatting** — `formatCount` util (commas + K/M) with tests, wired
+  into HUD chips. 59 tests. (30823d2)
+- **Haptics** — medium impact on build/upgrade/remove, selection click on move;
+  added backlog + this log. 54 tests. (145b715)
+
 (Started after commit 3e4f0e3 — drag-to-move. 54 tests passing.)

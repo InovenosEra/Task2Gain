@@ -21,14 +21,52 @@ class BuildResult {
 }
 
 class CityService {
-  CityService({FirebaseFirestore? firestore, double Function()? rng})
-      : _firestore = firestore ?? FirebaseFirestore.instance,
-        _rng = rng ?? (() => Random().nextDouble());
+  CityService({
+    FirebaseFirestore? firestore,
+    double Function()? rng,
+    DateTime Function()? clock,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _rng = rng ?? (() => Random().nextDouble()),
+        _clock = clock ?? DateTime.now;
 
   final FirebaseFirestore _firestore;
 
   /// Returns a value in [0, 1); injected in tests to force/suppress surprises.
   final double Function() _rng;
+
+  /// Wall clock; injected in tests to control the "today" used by the daily
+  /// reward.
+  final DateTime Function() _clock;
+
+  String _today() {
+    final d = _clock();
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Whether the once-per-day reward can be claimed (not yet claimed today).
+  Future<bool> isDailyRewardAvailable(String uid) async {
+    final snap = await _walletRef(uid).get();
+    return (snap.data()?['lastDailyClaim'] as String?) != _today();
+  }
+
+  /// Claims the daily reward: credits [kDailyRewardTokens] once per calendar
+  /// day. Returns the amount granted (0 if already claimed today).
+  Future<int> claimDailyReward(String uid) async {
+    return _firestore.runTransaction<int>((tx) async {
+      final ref = _walletRef(uid);
+      final snap = await tx.get(ref);
+      if (!snap.exists) throw StateError('ארנק לא נמצא');
+      final w = snap.data()!;
+      if ((w['lastDailyClaim'] as String?) == _today()) return 0;
+      final tokens = (w['tokens'] as num?)?.toInt() ?? 0;
+      tx.update(ref, {
+        'tokens': tokens + kDailyRewardTokens,
+        'lastDailyClaim': _today(),
+      });
+      return kDailyRewardTokens;
+    });
+  }
 
   DocumentReference<Map<String, dynamic>> _cityRef(String uid) =>
       _firestore.collection('cities').doc(uid);
