@@ -52,14 +52,19 @@ class _CityScreenState extends State<CityScreen> {
   Future<void> _onCellTapped(int gx, int gy) async {
     final isUpgrade = _city.isOccupied(gx, gy);
     try {
-      if (isUpgrade) {
-        await _cityService.upgradeBuilding(
-            uid: widget.data.uid, gridX: gx, gridY: gy);
+      final result = isUpgrade
+          ? await _cityService.upgradeBuilding(
+              uid: widget.data.uid, gridX: gx, gridY: gy)
+          : await _cityService.placeBuilding(
+              uid: widget.data.uid,
+              typeId: _selectedType,
+              gridX: gx,
+              gridY: gy);
+      if (result.hasBonus) {
+        _toast('🎁 בונוס! +${result.bonusTokens} אסימונים 🎉');
       } else {
-        await _cityService.placeBuilding(
-            uid: widget.data.uid, typeId: _selectedType, gridX: gx, gridY: gy);
+        _toast(isUpgrade ? '⬆️ שודרג!' : '🏗️ נבנה!');
       }
-      _toast(isUpgrade ? '⬆️ שודרג!' : '🏗️ נבנה!');
     } on StateError catch (e) {
       _toast(e.message);
     } catch (e) {
@@ -92,6 +97,27 @@ class _CityScreenState extends State<CityScreen> {
             uid: widget.data.uid,
             familyId: widget.data.familyId,
             cityLevel: _city.cityLevel,
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 118,
+          child: IgnorePointer(
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  'בנייה: הקש משבצת ריקה · שדרוג: הקש מבנה',
+                  style: bodyFont(size: 11, color: Colors.white70),
+                ),
+              ),
+            ),
           ),
         ),
         Positioned(

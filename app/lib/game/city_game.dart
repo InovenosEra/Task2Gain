@@ -135,6 +135,35 @@ class CityGame extends FlameGame with TapCallbacks {
     // Roof (lightest).
     _face(canvas, [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)],
         _shade(baseColor, 1.12));
+
+    // Level badge for upgraded buildings.
+    if (b.level > 1) {
+      final top = _iso(b.gridX + 0.5, b.gridY + 0.5, h);
+      _drawLevelBadge(canvas, Offset(top.dx, top.dy - 6), b.level);
+    }
+  }
+
+  void _drawLevelBadge(Canvas canvas, Offset center, int level) {
+    canvas.drawCircle(center, 11, Paint()..color = const Color(0xFF1E2233));
+    canvas.drawCircle(
+      center,
+      11,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = const Color(0xFFFFD24A),
+    );
+    final builder = ParagraphBuilder(ParagraphStyle(
+      textAlign: TextAlign.center,
+      fontSize: 12,
+      fontWeight: FontWeight.w900,
+    ))
+      ..pushStyle(TextStyle(color: const Color(0xFFFFFFFF)))
+      ..addText('$level');
+    final paragraph = builder.build()
+      ..layout(const ParagraphConstraints(width: 22));
+    canvas.drawParagraph(
+        paragraph, Offset(center.dx - 11, center.dy - paragraph.height / 2));
   }
 
   void _face(Canvas canvas, List<Offset> pts, Color color) {

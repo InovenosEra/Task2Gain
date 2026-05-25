@@ -11,12 +11,27 @@ void main() {
 
   setUp(() async {
     db = FakeFirebaseFirestore();
-    service = CityService(firestore: db);
+    // rng >= kSurpriseChance => never trigger a surprise, so the exact
+    // token/XP assertions below are deterministic.
+    service = CityService(firestore: db, rng: () => 1.0);
     await db.collection('wallets').doc('kid1').set({
       'userId': 'kid1', 'familyId': 'fam1',
       'points': 0, 'moneyILS': 0, 'tokens': 100,
       'lifetimeEarned': {'points': 0, 'money': 0},
     });
+  });
+
+  test('surprise bonus credits extra tokens when the roll hits', () async {
+    // rng < kSurpriseChance => always trigger a +kSurpriseBonusTokens surprise.
+    final lucky = CityService(firestore: db, rng: () => 0.0);
+    final result =
+        await lucky.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
+
+    expect(result.hasBonus, isTrue);
+    expect(result.bonusTokens, 5);
+    final w = (await db.collection('wallets').doc('kid1').get()).data()!;
+    expect(w['tokens'], 95); // 100 - 10 cost + 5 surprise
+    expect((w['lifetimeEarned'] as Map)['tokens'], 5);
   });
 
   test('placeBuilding debits tokens, credits XP, persists building', () async {

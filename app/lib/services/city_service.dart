@@ -1,24 +1,43 @@
 // lib/services/city_service.dart
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../game/building_catalog.dart';
+import '../game/economy_config.dart';
 import '../models/city.dart';
 
+/// Outcome of a place/upgrade action, so the UI can celebrate a surprise.
+class BuildResult {
+  const BuildResult({this.bonusTokens = 0});
+  final int bonusTokens;
+  bool get hasBonus => bonusTokens > 0;
+}
+
 class CityService {
-  CityService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  CityService({FirebaseFirestore? firestore, double Function()? rng})
+      : _firestore = firestore ?? FirebaseFirestore.instance,
+        _rng = rng ?? (() => Random().nextDouble());
 
   final FirebaseFirestore _firestore;
+
+  /// Returns a value in [0, 1); injected in tests to force/suppress surprises.
+  final double Function() _rng;
 
   DocumentReference<Map<String, dynamic>> _cityRef(String uid) =>
       _firestore.collection('cities').doc(uid);
   DocumentReference<Map<String, dynamic>> _walletRef(String uid) =>
       _firestore.collection('wallets').doc(uid);
 
+  /// Rolls for a surprise bonus. Kept separate so both place and upgrade
+  /// share the exact same delight rule.
+  int _rollBonus() => _rng() < kSurpriseChance ? kSurpriseBonusTokens : 0;
+
   /// Places a new building: debits tokens, credits XP (the `points` field),
-  /// and appends the building. Absolute writes (read-modify-write) so the
-  /// behaviour is correct and testable under fake_cloud_firestore.
-  Future<void> placeBuilding({
+  /// appends the building, and may award a surprise token bonus. Absolute
+  /// writes (read-modify-write) so the behaviour is testable under
+  /// fake_cloud_firestore. Returns the [BuildResult] (any bonus awarded).
+  Future<BuildResult> placeBuilding({
     required String uid,
     required String typeId,
     required int gridX,
@@ -27,7 +46,7 @@ class CityService {
     final type = buildingTypeById(typeId);
     if (type == null) throw StateError('סוג מבנה לא ידוע: $typeId');
 
-    await _firestore.runTransaction((tx) async {
+    return _firestore.runTransaction<BuildResult>((tx) async {
       final citySnap = await tx.get(_cityRef(uid));
       final walletSnap = await tx.get(_walletRef(uid));
       if (!walletSnap.exists) throw StateError('ארנק לא נמצא');
@@ -41,6 +60,7 @@ class CityService {
       if (tokens < cost) throw StateError('אין מספיק אסימונים');
 
       final xp = type.xpRewardForLevel(1);
+      final bonus = _rollBonus();
       final points = (wallet['points'] as num?)?.toInt() ?? 0;
       final lifetime = (wallet['lifetimeEarned'] as Map?)?.cast<String, dynamic>() ??
           <String, dynamic>{'points': 0, 'money': 0};
@@ -56,25 +76,27 @@ class CityService {
       }, SetOptions(merge: true));
 
       tx.update(_walletRef(uid), {
-        'tokens': tokens - cost,
+        'tokens': tokens - cost + bonus,
         'points': points + xp,
         'lifetimeEarned': {
           'points': ((lifetime['points'] as num?)?.toInt() ?? 0) + xp,
           'money': (lifetime['money'] as num?)?.toInt() ?? 0,
-          'tokens': (lifetime['tokens'] as num?)?.toInt() ?? 0,
+          'tokens': ((lifetime['tokens'] as num?)?.toInt() ?? 0) + bonus,
         },
       });
+
+      return BuildResult(bonusTokens: bonus);
     });
   }
 
   /// Upgrades the building at ([gridX],[gridY]) to its next level: charges the
-  /// rising token cost and credits the level's XP.
-  Future<void> upgradeBuilding({
+  /// rising token cost, credits the level's XP, and may award a surprise bonus.
+  Future<BuildResult> upgradeBuilding({
     required String uid,
     required int gridX,
     required int gridY,
   }) async {
-    await _firestore.runTransaction((tx) async {
+    return _firestore.runTransaction<BuildResult>((tx) async {
       final citySnap = await tx.get(_cityRef(uid));
       final walletSnap = await tx.get(_walletRef(uid));
       if (!walletSnap.exists) throw StateError('ארנק לא נמצא');
@@ -94,6 +116,7 @@ class CityService {
       final wallet = walletSnap.data()!;
       final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
       if (tokens < cost) throw StateError('אין מספיק אסימונים');
+      final bonus = _rollBonus();
       final points = (wallet['points'] as num?)?.toInt() ?? 0;
       final lifetime = (wallet['lifetimeEarned'] as Map?)?.cast<String, dynamic>() ??
           <String, dynamic>{'points': 0, 'money': 0};
@@ -107,14 +130,16 @@ class CityService {
       }, SetOptions(merge: true));
 
       tx.update(_walletRef(uid), {
-        'tokens': tokens - cost,
+        'tokens': tokens - cost + bonus,
         'points': points + xp,
         'lifetimeEarned': {
           'points': ((lifetime['points'] as num?)?.toInt() ?? 0) + xp,
           'money': (lifetime['money'] as num?)?.toInt() ?? 0,
-          'tokens': (lifetime['tokens'] as num?)?.toInt() ?? 0,
+          'tokens': ((lifetime['tokens'] as num?)?.toInt() ?? 0) + bonus,
         },
       });
+
+      return BuildResult(bonusTokens: bonus);
     });
   }
 

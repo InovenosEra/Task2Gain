@@ -13,6 +13,13 @@ const double kXpToTokenRate = 0.5;
 /// Max tokens a player may obtain from XP per calendar day (UTC).
 const int kXpToTokenDailyCap = 20;
 
+/// Chance (0..1) that placing or upgrading a building triggers a surprise
+/// bonus. Pure delight — never money, never gated behind it.
+const double kSurpriseChance = 0.25;
+
+/// Bonus tokens awarded when a surprise triggers.
+const int kSurpriseBonusTokens = 5;
+
 /// City level for a given total city value (level 1 at value 0).
 int cityLevelForValue(int cityValue) => 1 + (cityValue ~/ kCityValuePerLevel);
 
