@@ -227,6 +227,40 @@ class _CityScreenState extends State<CityScreen> {
   Widget _chrome(BuildContext context) {
     return Stack(
       children: [
+        // Empty-state onboarding: nudge brand-new cities toward building.
+        if (_city.buildings.isEmpty && !_buildMode)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 18, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.34),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('🔨', style: TextStyle(fontSize: 34)),
+                      const SizedBox(height: 8),
+                      Text('בנו את העיר הראשונה שלכם!',
+                          style: displayFont(
+                              size: 17, weight: FontWeight.w900)),
+                      const SizedBox(height: 4),
+                      Text('הקישו על «בנייה» ואז על משבצת ריקה',
+                          style: bodyFont(size: 12, color: Colors.white70)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
         // Top-left: settings + currency chips.
         Positioned(
           top: 8,
