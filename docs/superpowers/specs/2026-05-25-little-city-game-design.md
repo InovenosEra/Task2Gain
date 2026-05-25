@@ -85,12 +85,12 @@ Every part of the UI serves this loop: the city (where tokens are spent), the to
 
 | Item | Default | Notes |
 |---|---|---|
-| Starting token grant | **100 tokens** | Generous runway so the game is fun before any chore is required. |
-| Place house | ~10 tokens | |
-| Place shop / civic | ~20 tokens | |
-| Decoration | ~4 tokens | |
-| Upgrade building | ~16 tokens | Rising cost per level. |
-| Chore token value | **5–20 tokens** | Set per-chore by the admin (tunable; may scale up with the new economy). |
+| Starting token grant | **50 tokens** | Game is fun before any chore is required. |
+| Place house | ~5 tokens | |
+| Place shop / civic | ~10 tokens | |
+| Decoration | ~2 tokens | |
+| Upgrade building | ~8 tokens | Rising cost per level. |
+| Chore token value | **5–20 tokens** | Set per-chore by the admin. |
 
 **XP (winnings) — earned by playing**
 
