@@ -121,6 +121,36 @@ void main() {
     );
   });
 
+  test('moveBuilding relocates a building, free of charge', () async {
+    await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
+    await service.upgradeBuilding(uid: 'kid1', gridX: 0, gridY: 0); // lvl 2
+    final before = (await db.collection('wallets').doc('kid1').get())
+        .data()!['tokens'];
+
+    await service.moveBuilding(
+        uid: 'kid1', fromX: 0, fromY: 0, toX: 3, toY: 4);
+
+    final c = City.fromDoc(
+        'kid1', (await db.collection('cities').doc('kid1').get()).data());
+    expect(c.isOccupied(0, 0), isFalse);
+    expect(c.isOccupied(3, 4), isTrue);
+    expect(c.buildings.single.level, 2); // level preserved
+    expect(c.buildings.single.typeId, 'house');
+    final after = (await db.collection('wallets').doc('kid1').get())
+        .data()!['tokens'];
+    expect(after, before); // free
+  });
+
+  test('moveBuilding throws if destination occupied', () async {
+    await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
+    await service.placeBuilding(uid: 'kid1', typeId: 'park', gridX: 1, gridY: 0);
+    expect(
+      () => service.moveBuilding(
+          uid: 'kid1', fromX: 0, fromY: 0, toX: 1, toY: 0),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('renameCity stores a trimmed, capped name without touching buildings',
       () async {
     await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);

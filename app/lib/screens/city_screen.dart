@@ -59,6 +59,7 @@ class _CityScreenState extends State<CityScreen> {
   bool _trayOpen = false; // building menu visible
   String? _armedType; // a type armed for placement (tap a tile to place)
   ({int x, int y})? _selectedCell; // a building selected for upgrade
+  ({int x, int y})? _movingCell; // a building being relocated
   int _lastCityLevel = -1;
   int? _levelUpBanner;
   Timer? _levelUpTimer;
@@ -101,6 +102,19 @@ class _CityScreenState extends State<CityScreen> {
   }
 
   void _onCellTapped(int gx, int gy) {
+    // Relocation mode: the next empty tile becomes the new home.
+    if (_movingCell != null) {
+      if (_city.isOccupied(gx, gy)) {
+        _toast('המשבצת תפוסה');
+      } else {
+        final from = _movingCell!;
+        _movingCell = null;
+        _game.setBuildMode(false);
+        setState(() {});
+        _move(from.x, from.y, gx, gy);
+      }
+      return;
+    }
     if (_city.isOccupied(gx, gy)) {
       // Tapping a building selects it (toggle) — the upgrade popup appears
       // above it. Selecting clears any armed placement.
@@ -130,6 +144,29 @@ class _CityScreenState extends State<CityScreen> {
           uid: widget.data.uid, typeId: typeId, gridX: gx, gridY: gy);
       _game.celebrate(gx, gy,
           xpGained: result.xpGained, bonusTokens: result.bonusTokens);
+    } on StateError catch (e) {
+      _toast(e.message);
+    } catch (e) {
+      _toast('שגיאה: $e');
+    }
+  }
+
+  void _startMove() {
+    final cell = _selectedCell;
+    if (cell == null) return;
+    setState(() {
+      _movingCell = cell;
+      _selectedCell = null;
+      _game.setSelected(null, null);
+      _game.setBuildMode(true); // highlight empty tiles to drop onto
+    });
+  }
+
+  Future<void> _move(int fromX, int fromY, int toX, int toY) async {
+    try {
+      await _cityService.moveBuilding(
+          uid: widget.data.uid, fromX: fromX, fromY: fromY, toX: toX, toY: toY);
+      _game.celebrate(toX, toY, xpGained: 0);
     } on StateError catch (e) {
       _toast(e.message);
     } catch (e) {
@@ -197,10 +234,11 @@ class _CityScreenState extends State<CityScreen> {
 
   void _toggleTray() {
     setState(() {
-      if (_trayOpen || _armedType != null) {
-        // Cancel everything.
+      if (_trayOpen || _armedType != null || _movingCell != null) {
+        // Cancel everything (placement / moving / tray).
         _trayOpen = false;
         _armedType = null;
+        _movingCell = null;
         _game.setBuildMode(false);
       } else {
         _trayOpen = true;
@@ -384,7 +422,7 @@ class _CityScreenState extends State<CityScreen> {
     final type = buildingTypeById(b.typeId);
     final nextCost = type?.tokenCostForLevel(b.level + 1) ?? 0;
     final anchor = _game.anchorAbove(cell.x, cell.y);
-    const w = 196.0;
+    const w = 240.0;
     return Positioned(
       left: anchor.dx - w / 2,
       top: anchor.dy - 78,
@@ -449,6 +487,19 @@ class _CityScreenState extends State<CityScreen> {
                                     color: Colors.white)),
                           ],
                         ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: _startMove,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8EBF6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.open_with_rounded,
+                            size: 18, color: _Chrome.avatar),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -561,6 +612,29 @@ class _CityScreenState extends State<CityScreen> {
             ),
           ),
 
+        // Moving-mode hint.
+        if (_movingCell != null)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 70,
+            child: IgnorePointer(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text('בחרו משבצת ריקה להעברת המבנה',
+                      style: bodyFont(
+                          size: 13, weight: FontWeight.w700)),
+                ),
+              ),
+            ),
+          ),
+
         // Top-left: settings + currency chips.
         Positioned(
           top: 8,
@@ -625,7 +699,7 @@ class _CityScreenState extends State<CityScreen> {
             curve: Curves.easeOutBack,
             offset: Offset.zero,
             child: _BuildButton(
-              active: _trayOpen || _armedType != null,
+              active: _trayOpen || _armedType != null || _movingCell != null,
               onTap: _toggleTray,
             ),
           ),

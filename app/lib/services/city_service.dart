@@ -184,6 +184,34 @@ class CityService {
     });
   }
 
+  /// Moves the building at ([fromX],[fromY]) to an empty ([toX],[toY]),
+  /// keeping its type and level. Free (no token change).
+  Future<void> moveBuilding({
+    required String uid,
+    required int fromX,
+    required int fromY,
+    required int toX,
+    required int toY,
+  }) async {
+    return _firestore.runTransaction<void>((tx) async {
+      final citySnap = await tx.get(_cityRef(uid));
+      final city = City.fromDoc(uid, citySnap.data());
+      final idx = city.indexAt(fromX, fromY);
+      if (idx < 0) throw StateError('אין מבנה במשבצת הזו');
+      if ((fromX != toX || fromY != toY) && city.isOccupied(toX, toY)) {
+        throw StateError('המשבצת תפוסה');
+      }
+      final b = city.buildings[idx];
+      final buildings = [...city.buildings];
+      buildings[idx] = PlacedBuilding(
+          typeId: b.typeId, gridX: toX, gridY: toY, level: b.level);
+      tx.set(_cityRef(uid), {
+        'uid': uid,
+        'buildings': buildings.map((e) => e.toMap()).toList(),
+      }, SetOptions(merge: true));
+    });
+  }
+
   /// Renames the city. Trimmed; capped to a sane length. Stored alongside the
   /// buildings on the same city doc (merge so buildings are untouched).
   Future<void> renameCity(String uid, String name) {
