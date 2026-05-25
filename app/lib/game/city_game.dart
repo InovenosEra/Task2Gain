@@ -182,6 +182,7 @@ class CityGame extends FlameGame with TapCallbacks {
     for (final cl in _clouds) {
       _drawCloud(canvas, cl);
     }
+    _drawIsland(canvas);
     _drawGround(canvas);
 
     // Painter's algorithm: buildings + ambient scenery, far tiles first.
@@ -240,6 +241,55 @@ class CityGame extends FlameGame with TapCallbacks {
         const [0.0, 0.45, 0.75],
       );
     canvas.drawRect(rect, paint);
+  }
+
+  /// Extrudes the grass diamond into a floating island: a soil edge under the
+  /// two front faces, with a thin grass overhang lip, plus a soft drop shadow.
+  void _drawIsland(Canvas canvas) {
+    final n = gridSize.toDouble();
+    final right = _iso(n, 0), bottom = _iso(n, n), left = _iso(0, n);
+    const d = 18.0;
+    Offset down(Offset o, [double e = d]) => Offset(o.dx, o.dy + e);
+
+    // Soft shadow on the ground below the island.
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(bottom.dx, bottom.dy + d + 10),
+          width: (right.dx - left.dx) * 0.92,
+          height: 46),
+      Paint()
+        ..color = const Color(0x22000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+    );
+
+    Path face(Offset a, Offset b) => Path()
+      ..moveTo(a.dx, a.dy)
+      ..lineTo(b.dx, b.dy)
+      ..lineTo(down(b).dx, down(b).dy)
+      ..lineTo(down(a).dx, down(a).dy)
+      ..close();
+
+    // Right-front face (darker), left-front face (mid).
+    canvas.drawPath(face(right, bottom), Paint()..color = const Color(0xFF6B4A2E));
+    canvas.drawPath(face(bottom, left), Paint()..color = const Color(0xFF7C5838));
+    // Grass overhang lip along the top of each side.
+    canvas.drawPath(
+        face(right, bottom)
+          ..reset()
+          ..moveTo(right.dx, right.dy)
+          ..lineTo(bottom.dx, bottom.dy)
+          ..lineTo(down(bottom, 5).dx, down(bottom, 5).dy)
+          ..lineTo(down(right, 5).dx, down(right, 5).dy)
+          ..close(),
+        Paint()..color = const Color(0xFF5FA63E));
+    canvas.drawPath(
+        Path()
+          ..moveTo(bottom.dx, bottom.dy)
+          ..lineTo(left.dx, left.dy)
+          ..lineTo(down(left, 5).dx, down(left, 5).dy)
+          ..lineTo(down(bottom, 5).dx, down(bottom, 5).dy)
+          ..close(),
+        Paint()..color = const Color(0xFF6FB94A));
   }
 
   void _drawGround(Canvas canvas) {
