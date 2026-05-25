@@ -44,6 +44,7 @@ class CityGame extends FlameGame with TapCallbacks {
   final List<_FloatText> _floats = [];
   final List<_Confetti> _confetti = [];
   final List<_Cloud> _clouds = [];
+  final List<_Bird> _birds = [];
   final Map<String, double> _pop = {}; // 'gx_gy' -> elapsed seconds
   final Random _rand = Random();
   static const double _popDur = 0.45;
@@ -154,6 +155,11 @@ class CityGame extends FlameGame with TapCallbacks {
       cl.x += cl.speed * dt;
       if (cl.x - 70 * cl.scale > size.x) cl.x = -70 * cl.scale;
     }
+    for (final bd in _birds) {
+      bd.x += bd.speed * dt;
+      bd.phase += dt * 6;
+      if (bd.x - 14 * bd.scale > size.x) bd.x = -14 * bd.scale;
+    }
     _pulse += dt;
   }
 
@@ -174,6 +180,15 @@ class CityGame extends FlameGame with TapCallbacks {
           speed: 6 + _rand.nextDouble() * 10,
         ));
       }
+      for (var i = 0; i < 4; i++) {
+        _birds.add(_Bird(
+          x: _rand.nextDouble() * size.x,
+          y: 40 + _rand.nextDouble() * size.y * 0.28,
+          scale: 0.8 + _rand.nextDouble() * 0.6,
+          speed: 22 + _rand.nextDouble() * 16,
+          phase: _rand.nextDouble() * pi * 2,
+        ));
+      }
     }
   }
 
@@ -188,6 +203,9 @@ class CityGame extends FlameGame with TapCallbacks {
     _drawSky(canvas);
     for (final cl in _clouds) {
       _drawCloud(canvas, cl);
+    }
+    for (final bd in _birds) {
+      _drawBird(canvas, bd);
     }
     _drawIsland(canvas);
     _drawGround(canvas);
@@ -237,6 +255,21 @@ class CityGame extends FlameGame with TapCallbacks {
     for (final f in _floats) {
       _drawFloat(canvas, f);
     }
+  }
+
+  void _drawBird(Canvas canvas, _Bird bd) {
+    final s = bd.scale;
+    final flap = (sin(bd.phase) * 0.5 + 0.5) * 5 * s; // wing rise
+    final paint = Paint()
+      ..color = const Color(0xFF566173)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * s
+      ..strokeCap = StrokeCap.round;
+    final cx = bd.x, cy = bd.y;
+    canvas.drawLine(
+        Offset(cx - 9 * s, cy), Offset(cx, cy - flap), paint);
+    canvas.drawLine(
+        Offset(cx, cy - flap), Offset(cx + 9 * s, cy), paint);
   }
 
   void _drawCloud(Canvas canvas, _Cloud cl) {
@@ -981,6 +1014,21 @@ class _Cloud {
   final double y;
   final double scale;
   final double speed;
+}
+
+/// A little bird that flaps across the sky and wraps around.
+class _Bird {
+  _Bird(
+      {required this.x,
+      required this.y,
+      required this.scale,
+      required this.speed,
+      required this.phase});
+  double x;
+  final double y;
+  final double scale;
+  final double speed;
+  double phase;
 }
 
 /// A depth-sortable draw call (buildings + ambient scenery share one pass).
