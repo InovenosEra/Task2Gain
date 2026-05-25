@@ -16,7 +16,7 @@ import '../models/city.dart';
 /// building blocks. Real sprite art (AI-generated) replaces the drawing
 /// helpers later without changing the screen wiring.
 class CityGame extends FlameGame with TapCallbacks {
-  CityGame({required this.onCellTapped, this.gridSize = 8});
+  CityGame({required this.onCellTapped, this.gridSize = 10});
 
   /// Called with the grid coordinates of a tapped, in-bounds cell.
   final void Function(int gx, int gy) onCellTapped;
@@ -182,8 +182,10 @@ class CityGame extends FlameGame with TapCallbacks {
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    // Centre the diamond horizontally; leave headroom up top for tall builds.
-    _origin = Vector2(size.x / 2, size.y * 0.22);
+    // Centre the diamond; scale the vertical anchor to the grid so a larger
+    // city still fits between the HUD and the bottom edge.
+    final topFactor = gridSize >= 10 ? 0.16 : 0.22;
+    _origin = Vector2(size.x / 2, size.y * topFactor);
     if (_clouds.isEmpty) {
       for (var i = 0; i < 5; i++) {
         _clouds.add(_Cloud(
