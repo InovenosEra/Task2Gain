@@ -147,6 +147,22 @@ class CityGame extends FlameGame with TapCallbacks {
     }
   }
 
+  /// A big celebratory confetti burst from the top-centre (e.g. on level-up).
+  void burstConfetti() {
+    final cx = size.x / 2;
+    for (var i = 0; i < 48; i++) {
+      final ang = _rand.nextDouble() * pi * 2;
+      final spd = 90 + _rand.nextDouble() * 220;
+      _confetti.add(_Confetti(
+        Offset(cx + (_rand.nextDouble() - 0.5) * 120, size.y * 0.28),
+        vx: cos(ang) * spd,
+        vy: sin(ang) * spd - 120,
+        color: _confettiColors[i % _confettiColors.length],
+        spin: (_rand.nextDouble() - 0.5) * 12,
+      ));
+    }
+  }
+
   @override
   void update(double dt) {
     super.update(dt);

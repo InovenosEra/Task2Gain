@@ -57,6 +57,9 @@ class _CityScreenState extends State<CityScreen> {
   City _city = const City(uid: '', buildings: []);
   String _selectedType = 'house';
   bool _buildMode = false;
+  int _lastCityLevel = -1;
+  int? _levelUpBanner;
+  Timer? _levelUpTimer;
 
   bool get _isAdmin => widget.data.role == 'admin';
 
@@ -67,12 +70,24 @@ class _CityScreenState extends State<CityScreen> {
     _citySub = _cityService.watchCity(widget.data.uid).listen((city) {
       _city = city;
       _game.setBuildings(city.buildings);
+      // Celebrate when the city reaches a new level.
+      final level = city.cityLevel;
+      if (_lastCityLevel >= 0 && level > _lastCityLevel) {
+        _levelUpBanner = level;
+        _game.burstConfetti();
+        _levelUpTimer?.cancel();
+        _levelUpTimer = Timer(const Duration(milliseconds: 2600), () {
+          if (mounted) setState(() => _levelUpBanner = null);
+        });
+      }
+      _lastCityLevel = level;
       if (mounted) setState(() {});
     });
   }
 
   @override
   void dispose() {
+    _levelUpTimer?.cancel();
     _citySub?.cancel();
     super.dispose();
   }
@@ -227,6 +242,53 @@ class _CityScreenState extends State<CityScreen> {
   Widget _chrome(BuildContext context) {
     return Stack(
       children: [
+        // Level-up celebration banner.
+        if (_levelUpBanner != null)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 70,
+            child: IgnorePointer(
+              child: Center(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 360),
+                  curve: Curves.easeOutBack,
+                  builder: (_, v, child) =>
+                      Transform.scale(scale: v, child: child),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 22, vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [AppPalette.gold, AppPalette.goldDeep]),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                            color: AppPalette.goldDeep.withValues(alpha: 0.5),
+                            blurRadius: 18,
+                            offset: const Offset(0, 6)),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('🎉 רמה $_levelUpBanner!',
+                            style: displayFont(
+                                size: 20,
+                                weight: FontWeight.w900,
+                                color: Colors.white)),
+                        Text('העיר שלך גדלה!',
+                            style: bodyFont(
+                                size: 12, color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
         // Empty-state onboarding: nudge brand-new cities toward building.
         if (_city.buildings.isEmpty && !_buildMode)
           Positioned(
