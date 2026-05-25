@@ -577,10 +577,14 @@ class CityGame extends FlameGame with TapCallbacks {
       _face(canvas, [rim[1], rim[2], l(2), l(1)], _shade(roofC, 0.7));
       _face(canvas, [rim[2], rim[3], l(3), l(2)], _shade(roofC, 0.85));
       _face(canvas, [l(0), l(1), l(2), l(3)], _shade(roofC, 1.12));
-      // Factory: two short smokestacks on the roof.
+      // Factory: two short smokestacks puffing smoke.
       if (b.typeId == 'factory') {
-        _smokestack(canvas, _iso(x0 + 0.30, y0 + 0.30, h));
-        _smokestack(canvas, _iso(x0 + 0.52, y0 + 0.26, h));
+        final s1 = _iso(x0 + 0.30, y0 + 0.30, h);
+        final s2 = _iso(x0 + 0.52, y0 + 0.26, h);
+        _smokestack(canvas, s1);
+        _smokestack(canvas, s2);
+        _smoke(canvas, Offset(s1.dx, s1.dy - 18), 0);
+        _smoke(canvas, Offset(s2.dx, s2.dy - 18), 1.5);
       }
       // Hospital: a small red cross on the roof.
       if (b.typeId == 'hospital') {
@@ -727,6 +731,31 @@ class CityGame extends FlameGame with TapCallbacks {
     );
   }
 
+  /// Rising, fading smoke puffs from a smokestack top at [top].
+  void _smoke(Canvas canvas, Offset top, double seed) {
+    for (var i = 0; i < 3; i++) {
+      final t = ((_pulse * 0.4 + seed + i / 3) % 1.0);
+      final y = top.dy - t * 24;
+      final x = top.dx + sin(t * pi * 2 + seed) * 4;
+      final op = (1 - t) * 0.4;
+      canvas.drawCircle(Offset(x, y), 3 + t * 5,
+          Paint()..color = const Color(0xFFE4E7EC).withValues(alpha: op));
+    }
+  }
+
+  /// A pair of bright streaks bobbing on a water surface centred at [c].
+  void _shimmer(Canvas canvas, Offset c) {
+    final p = Paint()
+      ..color = const Color(0x66FFFFFF)
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    final dx = sin(_pulse * 1.6) * 4;
+    canvas.drawLine(
+        Offset(c.dx - 6 + dx, c.dy - 1), Offset(c.dx + 1 + dx, c.dy - 1), p);
+    canvas.drawLine(Offset(c.dx - 2 + dx * 0.6, c.dy + 3),
+        Offset(c.dx + 4 + dx * 0.6, c.dy + 3), p);
+  }
+
   /// A café parasol (table umbrella) standing on the ground at [base].
   void _parasol(Canvas canvas, Offset base) {
     canvas.drawOval(
@@ -768,15 +797,18 @@ class CityGame extends FlameGame with TapCallbacks {
         Offset(top.dx, top.dy - 9), 3, Paint()..color = _shade(color, 1.1));
   }
 
-  /// A little pennant flag at a roof apex.
+  /// A little pennant flag at a roof apex, rippling in the wind.
   void _flag(Canvas canvas, Offset apex) {
     final poleTop = Offset(apex.dx, apex.dy - 20);
     canvas.drawLine(apex, poleTop,
         Paint()..color = const Color(0xFF6B7280)..strokeWidth = 2);
+    final w = sin(_pulse * 5) * 2.5; // wind ripple
     final flag = Path()
       ..moveTo(poleTop.dx, poleTop.dy)
-      ..lineTo(poleTop.dx + 16, poleTop.dy + 5)
-      ..lineTo(poleTop.dx, poleTop.dy + 10)
+      ..quadraticBezierTo(
+          poleTop.dx + 8, poleTop.dy + 2 + w, poleTop.dx + 16, poleTop.dy + 5)
+      ..quadraticBezierTo(
+          poleTop.dx + 8, poleTop.dy + 8 - w, poleTop.dx, poleTop.dy + 10)
       ..close();
     canvas.drawPath(flag, Paint()..color = const Color(0xFFEF476F));
   }
@@ -830,6 +862,7 @@ class CityGame extends FlameGame with TapCallbacks {
       Rect.fromCenter(center: pondC, width: tileW * 0.42, height: tileH * 0.5),
       Paint()..color = const Color(0xFF8FD3F2),
     );
+    _shimmer(canvas, pondC);
     _tree(canvas, _iso(x + 0.34, y + 0.36), 1.0);
     _tree(canvas, _iso(x + 0.62, y + 0.3), 0.78);
     // a little bench near the front
@@ -988,6 +1021,7 @@ class CityGame extends FlameGame with TapCallbacks {
       Rect.fromCenter(center: c, width: tileW * 0.46, height: tileH * 0.52),
       Paint()..color = const Color(0xFF8FD3F2),
     );
+    _shimmer(canvas, c);
     // central pedestal + upper bowl
     canvas.drawRect(
       Rect.fromCenter(center: Offset(c.dx, c.dy - 6), width: 5, height: 12),
