@@ -3,6 +3,12 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Fix: sprite-loader exception** — consult AssetManifest and only load
+  sprites that are actually bundled, so missing PNGs no longer throw an
+  unhandled "Unable to load asset" exception at startup. Verified gone on sim.
+  63 tests. (commit pending)
+- **Currency chip pulse** — icon badge pops (1→1.32→1) when value rises.
+  (f609870)
 - **City stats panel** — tap the city card to open a scrollable sheet: level,
   city value, building count + per-type breakdown, with a rename action.
   Verified on sim. 63 tests. (commit pending)

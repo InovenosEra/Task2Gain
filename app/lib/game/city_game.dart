@@ -5,6 +5,7 @@ import 'package:flame/cache.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/services.dart' show AssetManifest, rootBundle;
 
 import 'building_catalog.dart';
 import '../models/city.dart';
@@ -166,16 +167,24 @@ class CityGame extends FlameGame with TapCallbacks {
 
   @override
   Future<void> onLoad() async {
-    // Preload any building sprites that ship in assets/city/. Missing files
-    // are expected (canvas art covers them), so failures are swallowed.
+    // Preload building sprites that ACTUALLY ship in assets/city/. We consult
+    // the asset manifest first and only load files that exist, so missing
+    // sprites (the common case — canvas art covers them) never trigger a
+    // failed-asset exception.
     final cityImages = Images(prefix: 'assets/city/');
-    for (final type in kBuildingCatalog) {
-      try {
-        final image = await cityImages.load('${type.id}.png');
-        _sprites[type.id] = Sprite(image);
-      } catch (_) {
-        // No sprite for this type yet — the canvas fallback handles it.
+    try {
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final available = manifest.listAssets().toSet();
+      for (final type in kBuildingCatalog) {
+        if (!available.contains('assets/city/${type.id}.png')) continue;
+        try {
+          _sprites[type.id] = Sprite(await cityImages.load('${type.id}.png'));
+        } catch (_) {
+          // Corrupt/unreadable sprite — fall back to canvas art.
+        }
       }
+    } catch (_) {
+      // No manifest available — canvas art covers every building.
     }
   }
 
