@@ -645,6 +645,7 @@ class _CityScreenState extends State<CityScreen>
     final b = _city.buildings[idx];
     final type = buildingTypeById(b.typeId);
     final nextCost = type?.tokenCostForLevel(b.level + 1) ?? 0;
+    final canAfford = nextCost <= _tokens;
     final anchor = _game.anchorAbove(cell.x, cell.y);
     const w = 240.0;
     return Positioned(
@@ -685,7 +686,9 @@ class _CityScreenState extends State<CityScreen>
                   children: [
                     GestureDetector(
                       onTap: _upgradeSelected,
-                      child: Container(
+                      child: Opacity(
+                        opacity: canAfford ? 1.0 : 0.5,
+                        child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
@@ -711,6 +714,7 @@ class _CityScreenState extends State<CityScreen>
                                     color: Colors.white)),
                           ],
                         ),
+                      ),
                       ),
                     ),
                     const SizedBox(width: 6),
