@@ -59,6 +59,27 @@ class _CityScreenState extends State<CityScreen>
   StreamSubscription<City>? _citySub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _walletSub;
   int _tokens = 0; // current token balance (for tray affordability)
+
+  // Which physical side the camera/Dynamic Island is on ('left'|'right'); the
+  // chrome insets that side and hugs the opposite (clear) edge. iOS reports a
+  // symmetric safe inset in landscape, so we ask the native side which flip
+  // we're in. Defaults to 'left' until the first answer arrives.
+  static const MethodChannel _orientationChannel =
+      MethodChannel('city/orientation');
+  String _notchSide = 'left';
+
+  Future<void> _refreshNotchSide() async {
+    try {
+      final o = await _orientationChannel
+          .invokeMethod<String>('interfaceOrientation');
+      // Calibrated on iPhone 15 Pro sim: in landscapeLeft the camera/Island is
+      // on the RIGHT edge; in landscapeRight it's on the LEFT.
+      final side = o == 'landscapeLeft' ? 'right' : 'left';
+      if (side != _notchSide && mounted) setState(() => _notchSide = side);
+    } catch (_) {
+      // Native channel unavailable — keep the last/default side (safe).
+    }
+  }
   City _city = const City(uid: '', buildings: []);
   String _selectedType = 'house';
   bool _trayOpen = false; // building menu visible
@@ -77,6 +98,7 @@ class _CityScreenState extends State<CityScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _refreshNotchSide();
     _game = CityGame(onCellTapped: _onCellTapped);
     _citySub = _cityService.watchCity(widget.data.uid).listen((city) {
       _city = city;
@@ -131,6 +153,12 @@ class _CityScreenState extends State<CityScreen>
       // Claim failed (e.g. network) — keep the banner so the player can retry.
       if (mounted) _toast('לא ניתן לאסוף כעת, נסו שוב');
     }
+  }
+
+  @override
+  void didChangeMetrics() {
+    // Fires on rotation (among other things) — re-check which flip we're in.
+    _refreshNotchSide();
   }
 
   @override
@@ -579,13 +607,14 @@ class _CityScreenState extends State<CityScreen>
         // Full-bleed city — draws under the notch and screen edges.
         Positioned.fill(child: GameWidget(game: _game)),
 
-        // Floating chrome respects the safe area on ALL sides. In landscape iOS
-        // reserves the side inset on BOTH edges (so a flip stays safe), and we
-        // can't tell from the OS which physical side the notch is on — so the
-        // only flip-safe choice is to inset both sides. This keeps the rail and
-        // city card clear of the Dynamic Island in either landscape orientation.
+        // Floating chrome insets only the camera/Dynamic-Island side (from the
+        // native orientation report) and hugs the opposite, clear edge — so no
+        // side space is wasted, in either landscape flip. Top/bottom always
+        // inset (status/home-indicator).
         Positioned.fill(
           child: SafeArea(
+            left: _notchSide == 'left',
+            right: _notchSide == 'right',
             child: Stack(
               children: [
                 _chrome(context),

@@ -6,6 +6,9 @@ what changed, verification, commit.
 ## 2026-05-26 (user back) — full-screen board
 - Responsive tile sizing: the iso diamond now fills ~full screen width (was ~71%), iso ratio flattened to 0.42 to fit the short landscape height, building heights scaled (_hScale) to stay proportionate. Matches the mockup full-width board. 72 tests.
 
+## 2026-05-26 — orientation-aware edge-hugging chrome
+- Native MethodChannel (city/orientation) reports interfaceOrientation; the chrome now insets only the camera/Dynamic-Island side and hugs the opposite clear edge, per landscape flip (re-queried on didChangeMetrics). No wasted side space in either orientation; rail/card never under the Island. Calibrated: landscapeLeft=>Island on right. 72 tests.
+
 ## STATUS (autonomous)
 Safe, high-value, unsupervised work is largely **exhausted** — ~22 verified
 commits this session (feel, engagement, robustness, accessibility, perf, and
