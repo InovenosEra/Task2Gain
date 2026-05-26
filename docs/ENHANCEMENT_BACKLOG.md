@@ -26,6 +26,7 @@ prod writes, no destructive ops.
 - [x] Defensive null/format handling in city parsing (fuzz-ish tests).
 
 ## More polish (replenished)
+- [x] Dim build-tray items beyond the token balance.
 - [x] Show XP reward alongside token cost on build-tray items.
 - [x] Gentle scale-in animation for build-tray items.
 - [ ] App version line in the settings sheet.

@@ -57,6 +57,8 @@ class _CityScreenState extends State<CityScreen>
   final CityService _cityService = CityService();
   late final CityGame _game;
   StreamSubscription<City>? _citySub;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _walletSub;
+  int _tokens = 0; // current token balance (for tray affordability)
   City _city = const City(uid: '', buildings: []);
   String _selectedType = 'house';
   bool _trayOpen = false; // building menu visible
@@ -98,6 +100,15 @@ class _CityScreenState extends State<CityScreen>
       _lastCityLevel = level;
       if (mounted) setState(() {});
     });
+    // Track the token balance so the build tray can dim what's unaffordable.
+    _walletSub = FirebaseFirestore.instance
+        .collection('wallets')
+        .doc(widget.data.uid)
+        .snapshots()
+        .listen((s) {
+      final t = (s.data()?['tokens'] as num?)?.toInt() ?? 0;
+      if (t != _tokens && mounted) setState(() => _tokens = t);
+    });
     // Surface the daily reward if it hasn't been claimed today.
     _cityService.isDailyRewardAvailable(widget.data.uid).then((available) {
       if (available && mounted) setState(() => _dailyAvailable = true);
@@ -135,6 +146,7 @@ class _CityScreenState extends State<CityScreen>
     WidgetsBinding.instance.removeObserver(this);
     _levelUpTimer?.cancel();
     _citySub?.cancel();
+    _walletSub?.cancel();
     super.dispose();
   }
 
@@ -1021,6 +1033,7 @@ class _CityScreenState extends State<CityScreen>
                 ? _BuildTray(
                     key: const ValueKey('tray'),
                     selected: _selectedType,
+                    tokens: _tokens,
                     onSelect: _armType,
                   )
                 : const SizedBox.shrink(key: ValueKey('no-tray')),
@@ -1601,9 +1614,15 @@ class _BuildButton extends StatelessWidget {
 }
 
 class _BuildTray extends StatelessWidget {
-  const _BuildTray({super.key, required this.selected, required this.onSelect});
+  const _BuildTray({
+    super.key,
+    required this.selected,
+    required this.tokens,
+    required this.onSelect,
+  });
 
   final String selected;
+  final int tokens;
   final ValueChanged<String> onSelect;
 
   @override
@@ -1638,6 +1657,7 @@ class _BuildTray extends StatelessWidget {
                   return _TrayItem(
                     type: b,
                     selected: b.id == selected,
+                    affordable: b.baseTokenCost <= tokens,
                     onTap: () => onSelect(b.id),
                   );
                 },
@@ -1654,11 +1674,13 @@ class _TrayItem extends StatelessWidget {
   const _TrayItem({
     required this.type,
     required this.selected,
+    required this.affordable,
     required this.onTap,
   });
 
   final BuildingType type;
   final bool selected;
+  final bool affordable;
   final VoidCallback onTap;
 
   @override
@@ -1671,6 +1693,8 @@ class _TrayItem extends StatelessWidget {
         duration: const Duration(milliseconds: 240),
         curve: Curves.easeOutBack,
         builder: (_, s, child) => Transform.scale(scale: s, child: child),
+        child: Opacity(
+        opacity: affordable ? 1.0 : 0.42,
         child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         width: 76,
@@ -1717,6 +1741,7 @@ class _TrayItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
       ),
     );
