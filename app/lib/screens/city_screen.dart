@@ -848,7 +848,7 @@ class _CityScreenState extends State<CityScreen>
                           style: displayFont(
                               size: 17, weight: FontWeight.w900)),
                       const SizedBox(height: 4),
-                      Text('הקישו על «בנייה» ואז על משבצת ריקה',
+                      Text('הקישו «בנייה», בחרו מבנה, ואז משבצת ריקה',
                           style: bodyFont(size: 12, color: Colors.white70)),
                     ],
                   ),
