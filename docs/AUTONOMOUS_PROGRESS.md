@@ -3,6 +3,17 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+## STATUS (autonomous)
+Safe, high-value, unsupervised work is largely **exhausted** — ~22 verified
+commits this session (feel, engagement, robustness, accessibility, perf, and
+full per-type building detail), all pushed, 66 tests green, analyzer clean.
+Loop now runs on a slower heartbeat and only commits genuinely useful, low-risk
+changes (small polish, more tests). **Held for your review** (too risky/
+design-heavy to do unsupervised): (1) tying city milestones to the real prize/
+reward system, (2) loading/error states inside the big pushed sub-screens, (3)
+Cloud Functions to harden wallet credits (client-cheatable prototype rules),
+(4) real AI building sprites (pipeline ready — drop PNGs in app/assets/city/).
+
 - **School clock + banner-collision guard** — schools get a clock face; daily/level-up/moving banners are now mutually exclusive. 66 tests.
 - **Apartment rooftop unit** — small mechanical unit detail on apartment roofs. 66 tests.
 - **Tray scale-in + Hebrew audit** — build-tray items gently scale in when the
