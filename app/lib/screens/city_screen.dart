@@ -128,7 +128,8 @@ class _CityScreenState extends State<CityScreen>
         _toast('🎁 בונוס יומי · +$amount אסימונים');
       }
     } catch (_) {
-      if (mounted) setState(() => _dailyAvailable = false);
+      // Claim failed (e.g. network) — keep the banner so the player can retry.
+      if (mounted) _toast('לא ניתן לאסוף כעת, נסו שוב');
     }
   }
 

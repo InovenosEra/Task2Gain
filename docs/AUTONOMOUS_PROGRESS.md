@@ -14,6 +14,7 @@ reward system, (2) loading/error states inside the big pushed sub-screens, (3)
 Cloud Functions to harden wallet credits (client-cheatable prototype rules),
 (4) real AI building sprites (pipeline ready — drop PNGs in app/assets/city/).
 
+- **Daily-claim retry** — a failed daily-reward claim now keeps the banner (with an error toast) so the player can retry, instead of hiding it ungranted. 70 tests.
 - **Stream error handling** — city + wallet stream subscriptions now have onError handlers (stream onError) so a transient Firestore error stays unhandled-free. 70 tests.
 - **Lifecycle integration test** — place→upgrade→move→remove keeps wallet + city consistent. 70 tests.
 - **City-card a11y** — the city card is flagged as a semantic button (city-card a11y). 69 tests.
