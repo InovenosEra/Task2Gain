@@ -696,11 +696,25 @@ class CityGame extends FlameGame with TapCallbacks {
       _face(canvas, [rim[1], rim[2], apex], _shade(roofC, 0.74));
       _face(canvas, [rim[2], rim[3], apex], _shade(roofC, 0.94));
       _face(canvas, [rim[3], rim[0], apex], _shade(roofC, 1.04));
-      // House gets a chimney; school gets a rooftop flag.
+      // House gets a chimney; school gets a rooftop flag + a clock face.
       if (b.typeId == 'house') {
         _chimney(canvas, x1 - 0.30, y0 + 0.16, h);
       } else if (b.typeId == 'school') {
         _flag(canvas, apex);
+        // clock on the front gable, just below the wall top
+        final cc = _iso((x0 + x1) / 2, y1, h - 6);
+        canvas.drawCircle(cc, 5, Paint()..color = const Color(0xFFFFFFFF));
+        canvas.drawCircle(
+            cc,
+            5,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1
+              ..color = const Color(0xFF7C83FF));
+        canvas.drawLine(cc, Offset(cc.dx, cc.dy - 3),
+            Paint()..color = const Color(0xFF2A2D43)..strokeWidth = 1);
+        canvas.drawLine(cc, Offset(cc.dx + 2.5, cc.dy),
+            Paint()..color = const Color(0xFF2A2D43)..strokeWidth = 1);
       }
     } else if (style.roof == _Roof.dome) {
       // Civic landmark: flat cream roof with a golden dome + finial.

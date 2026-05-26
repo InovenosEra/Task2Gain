@@ -833,7 +833,10 @@ class _CityScreenState extends State<CityScreen>
           ),
 
         // Daily reward: a tappable banner to collect once per day.
-        if (_dailyAvailable && _movingCell == null && _selectedCell == null)
+        if (_dailyAvailable &&
+            _movingCell == null &&
+            _selectedCell == null &&
+            _levelUpBanner == null)
           Positioned(
             left: 0,
             right: 0,
@@ -873,7 +876,7 @@ class _CityScreenState extends State<CityScreen>
           ),
 
         // Moving-mode hint.
-        if (_movingCell != null)
+        if (_movingCell != null && _levelUpBanner == null)
           Positioned(
             left: 0,
             right: 0,
