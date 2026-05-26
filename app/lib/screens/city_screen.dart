@@ -518,6 +518,7 @@ class _CityScreenState extends State<CityScreen>
         ),
       ),
     );
+    controller.dispose();
     if (name != null && name.trim().isNotEmpty) {
       await _cityService.renameCity(widget.data.uid, name);
     }
