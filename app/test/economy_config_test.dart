@@ -19,4 +19,13 @@ void main() {
     expect(tokensFromXp(2), 1);
     expect(tokensFromXp(5), 2);
   });
+
+  test('negative xp never yields tokens', () {
+    expect(tokensFromXp(-5), 0);
+    expect(tokensFromXp(-1), 0);
+  });
+
+  test('daily reward is a positive token amount', () {
+    expect(kDailyRewardTokens, greaterThan(0));
+  });
 }

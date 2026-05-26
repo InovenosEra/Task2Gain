@@ -32,6 +32,13 @@ void main() {
     expect(a.displayName, b.displayName);
   });
 
+  test('displayName is stable and non-empty even for an empty uid', () {
+    const a = City(uid: '', buildings: []);
+    const b = City(uid: '', buildings: []);
+    expect(a.displayName, isNotEmpty);
+    expect(a.displayName, b.displayName);
+  });
+
   test('displayName prefers the chosen name (trimmed)', () {
     final c = City.fromDoc('u1', {'name': '  סאניוויל  ', 'buildings': []});
     expect(c.name, '  סאניוויל  ');
