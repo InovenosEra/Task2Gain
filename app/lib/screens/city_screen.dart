@@ -1648,6 +1648,9 @@ class _BuildTray extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Show cheapest-first so affordable basics lead (helpful for new players).
+    final ordered = [...kBuildingCatalog]
+      ..sort((a, b) => a.baseTokenCost.compareTo(b.baseTokenCost));
     return Container(
       decoration: BoxDecoration(
         color: _Chrome.card,
@@ -1671,10 +1674,10 @@ class _BuildTray extends StatelessWidget {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                itemCount: kBuildingCatalog.length,
+                itemCount: ordered.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, i) {
-                  final b = kBuildingCatalog[i];
+                  final b = ordered[i];
                   return _TrayItem(
                     type: b,
                     selected: b.id == selected,
