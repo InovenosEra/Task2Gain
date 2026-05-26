@@ -21,7 +21,7 @@ prod writes, no destructive ops.
 
 ## Robustness / quality
 - [ ] Graceful loading + error states for pushed sub-screens (stream errors).
-- [ ] Expand unit tests: economy_config, building_catalog, City value/level edges.
+- [x] Expand unit tests: economy_config, building_catalog, City value/level edges.
 - [ ] Guard placement against off-grid / duplicate coords (already partly covered).
 - [ ] Defensive null/format handling in wallet + city parsing (fuzz-ish tests).
 

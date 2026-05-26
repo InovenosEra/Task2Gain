@@ -38,6 +38,26 @@ void main() {
     expect(c.displayName, 'סאניוויל');
   });
 
+  test('cityValue ignores unknown building types', () {
+    final c = City.fromDoc('u1', {
+      'buildings': [
+        {'type': 'house', 'gridX': 0, 'gridY': 0, 'level': 1}, // value 10
+        {'type': 'mystery', 'gridX': 1, 'gridY': 0, 'level': 2}, // ignored
+      ],
+    });
+    expect(c.cityValue, 10);
+  });
+
+  test('indexAt finds an occupied cell and misses an empty one', () {
+    final c = City.fromDoc('u1', {
+      'buildings': [
+        {'type': 'house', 'gridX': 2, 'gridY': 3, 'level': 1},
+      ],
+    });
+    expect(c.indexAt(2, 3), 0);
+    expect(c.indexAt(0, 0), -1);
+  });
+
   test('PlacedBuilding toMap matches schema', () {
     const b = PlacedBuilding(typeId: 'park', gridX: 3, gridY: 4, level: 1);
     expect(b.toMap(), {'type': 'park', 'gridX': 3, 'gridY': 4, 'level': 1});

@@ -17,6 +17,18 @@ void main() {
     expect(buildingTypeById('nope'), isNull);
   });
 
+  test('includes all expected building types', () {
+    final ids = kBuildingCatalog.map((b) => b.id).toSet();
+    expect(
+      ids.containsAll({
+        'house', 'shop', 'park', 'school', 'factory', 'apartment', 'tower',
+        'cityhall', 'hospital', 'cafe', 'bank', 'fountain', 'decor', 'road',
+      }),
+      isTrue,
+      reason: 'a known building type went missing',
+    );
+  });
+
   test('cost, xp and value scale by level', () {
     final house = buildingTypeById('house')!;
     expect(house.tokenCostForLevel(1), 10);

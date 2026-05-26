@@ -3,6 +3,8 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Test coverage** — catalog completeness (all 14 ids), City.cityValue ignores
+  unknown types, indexAt hit/miss. 63 tests. (commit pending)
 - **Daily reward** — once-per-day +15 token bonus, date-guarded, injectable
   clock; TDD'd `CityService.claimDailyReward`/`isDailyRewardAvailable`. Tappable
   green banner on the city; confetti + haptic on claim. Verified banner on sim.
