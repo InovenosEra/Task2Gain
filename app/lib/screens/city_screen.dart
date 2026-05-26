@@ -579,13 +579,13 @@ class _CityScreenState extends State<CityScreen>
         // Full-bleed city — draws under the notch and screen edges.
         Positioned.fill(child: GameWidget(game: _game)),
 
-        // Floating chrome is inset from the notch/home-indicator, but NOT from
-        // the right edge: in landscape iOS reserves a symmetric side inset, and
-        // the notch is on the left — so insetting the right just wastes space.
-        // Right-side chrome (city card + action rail) hugs the right edge.
+        // Floating chrome respects the safe area on ALL sides. In landscape iOS
+        // reserves the side inset on BOTH edges (so a flip stays safe), and we
+        // can't tell from the OS which physical side the notch is on — so the
+        // only flip-safe choice is to inset both sides. This keeps the rail and
+        // city card clear of the Dynamic Island in either landscape orientation.
         Positioned.fill(
           child: SafeArea(
-            right: false,
             child: Stack(
               children: [
                 _chrome(context),
