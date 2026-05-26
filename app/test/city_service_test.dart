@@ -170,6 +170,25 @@ void main() {
     );
   });
 
+  test('full lifecycle keeps wallet + city consistent', () async {
+    // place house: -10 tokens (->90), +8 xp
+    await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
+    // upgrade to lvl2: -20 (->70), +16 xp (->24)
+    await service.upgradeBuilding(uid: 'kid1', gridX: 0, gridY: 0);
+    // move: free
+    await service.moveBuilding(uid: 'kid1', fromX: 0, fromY: 0, toX: 3, toY: 3);
+    // remove lvl2 house (value 20): refund 10 (->80)
+    final refund = await service.removeBuilding(uid: 'kid1', gridX: 3, gridY: 3);
+    expect(refund, 10);
+
+    final w = (await db.collection('wallets').doc('kid1').get()).data()!;
+    expect(w['tokens'], 80);
+    expect(w['points'], 24);
+    final c = City.fromDoc(
+        'kid1', (await db.collection('cities').doc('kid1').get()).data());
+    expect(c.buildings, isEmpty);
+  });
+
   test('renameCity stores a trimmed, capped name without touching buildings',
       () async {
     await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
