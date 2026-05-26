@@ -142,6 +142,24 @@ void main() {
     expect(after, before); // free
   });
 
+  test('moveBuilding to the same cell is a harmless no-op', () async {
+    await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 2, gridY: 2);
+    await service.moveBuilding(
+        uid: 'kid1', fromX: 2, fromY: 2, toX: 2, toY: 2);
+    final c = City.fromDoc(
+        'kid1', (await db.collection('cities').doc('kid1').get()).data());
+    expect(c.isOccupied(2, 2), isTrue);
+    expect(c.buildings.length, 1);
+  });
+
+  test('removeBuilding of a level-1 building refunds half its base value',
+      () async {
+    await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
+    final refund =
+        await service.removeBuilding(uid: 'kid1', gridX: 0, gridY: 0);
+    expect(refund, 5); // house value at level 1 = 10, refund = 5
+  });
+
   test('moveBuilding throws if destination occupied', () async {
     await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
     await service.placeBuilding(uid: 'kid1', typeId: 'park', gridX: 1, gridY: 0);

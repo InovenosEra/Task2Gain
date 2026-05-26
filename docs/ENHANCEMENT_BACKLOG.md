@@ -29,7 +29,7 @@ prod writes, no destructive ops.
 - [x] Show XP reward alongside token cost on build-tray items.
 - [ ] Gentle scale-in animation for build-tray items.
 - [ ] App version line in the settings sheet.
-- [ ] More CityService edge tests (move no-op same cell; level-1 remove refund).
+- [x] More CityService edge tests (move no-op same cell; level-1 remove refund).
 - [ ] Confirm 100% Hebrew strings (no stray English in city UI).
 
 ## Performance

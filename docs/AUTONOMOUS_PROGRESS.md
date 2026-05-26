@@ -3,6 +3,8 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **CityService edge tests** — move-to-same-cell no-op, level-1 remove refund.
+  66 tests.
 - **Tray XP display** — build-tray items show XP reward (⭐+N) under cost.
 - **Milestone teaser** — city stats panel shows next-level goal. 64 tests.
 - **Defensive parsing** — City.fromDoc / PlacedBuilding.fromMap tolerate
