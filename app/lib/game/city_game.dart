@@ -156,6 +156,7 @@ class CityGame extends FlameGame with TapCallbacks {
       _Style(roof: _Roof.flat, roofColor: Color(0xFFBBBBBB));
 
   Set<String> _roadCells = {};
+  Set<String> _occupied = {};
 
   void setBuildings(List<PlacedBuilding> buildings) {
     _buildings = buildings;
@@ -163,6 +164,7 @@ class CityGame extends FlameGame with TapCallbacks {
       for (final b in buildings)
         if (b.typeId == 'road') '${b.gridX}_${b.gridY}'
     };
+    _occupied = {for (final b in buildings) '${b.gridX}_${b.gridY}'};
   }
 
   @override
@@ -308,7 +310,7 @@ class CityGame extends FlameGame with TapCallbacks {
     _drawIsland(canvas);
     _drawGround(canvas);
 
-    final occupied = {for (final b in _buildings) '${b.gridX}_${b.gridY}'};
+    final occupied = _occupied; // cached on setBuildings
 
     // Build mode: pulse-highlight the empty, buildable tiles.
     if (_buildMode) {

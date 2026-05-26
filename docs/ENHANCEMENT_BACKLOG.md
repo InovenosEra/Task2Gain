@@ -26,7 +26,7 @@ prod writes, no destructive ops.
 - [ ] Defensive null/format handling in wallet + city parsing (fuzz-ish tests).
 
 ## Performance
-- [ ] CityGame.render allocates sets/lists every frame — cache occupied set when
+- [x] CityGame.render allocates sets/lists every frame — cache occupied set when
       buildings change instead of per-frame.
 
 ## Notes / constraints

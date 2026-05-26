@@ -3,6 +3,8 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Perf: cache occupied set** — compute occupied cells once in setBuildings
+  instead of every frame in render. 63 tests. (commit pending)
 - **Lifecycle pause** — CityScreen observes app lifecycle and pauses/resumes
   the Flame engine on background/foreground (saves CPU/battery). 63 tests.
   (commit pending)
