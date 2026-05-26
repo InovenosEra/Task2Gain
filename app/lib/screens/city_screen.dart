@@ -1327,7 +1327,10 @@ class _CityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final frac = (valueInLevel / step).clamp(0.0, 1.0);
-    return ScaleTap(
+    return Semantics(
+      button: true,
+      label: '$name, רמה $level — פרטי העיר',
+      child: ScaleTap(
       onTap: onTap,
       scale: 0.98,
       child: Container(
@@ -1386,6 +1389,7 @@ class _CityCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

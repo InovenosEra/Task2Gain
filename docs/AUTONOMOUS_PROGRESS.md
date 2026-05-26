@@ -14,6 +14,7 @@ reward system, (2) loading/error states inside the big pushed sub-screens, (3)
 Cloud Functions to harden wallet credits (client-cheatable prototype rules),
 (4) real AI building sprites (pipeline ready — drop PNGs in app/assets/city/).
 
+- **City-card a11y** — the city card is flagged as a semantic button (city-card a11y). 69 tests.
 - **Rail a11y** — action-rail buttons flagged as semantic buttons (rail semantics). 69 tests.
 - **Upgrade popup clamp** — selection popup clamped on-screen (no clipping off the top/sides for edge or tall back-row buildings). Verified on sim. 69 tests.
 - **Architecture overview doc** — docs/little-city-overview.md: handoff map of
