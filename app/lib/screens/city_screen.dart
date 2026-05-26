@@ -648,9 +648,14 @@ class _CityScreenState extends State<CityScreen>
     final canAfford = nextCost <= _tokens;
     final anchor = _game.anchorAbove(cell.x, cell.y);
     const w = 240.0;
+    // Clamp on-screen so the popup never clips off the top or sides for
+    // buildings near the grid edges / tall builds near the back.
+    final screen = MediaQuery.of(context).size;
+    final left = (anchor.dx - w / 2).clamp(8.0, screen.width - w - 8);
+    final top = (anchor.dy - 78).clamp(8.0, screen.height - 150);
     return Positioned(
-      left: anchor.dx - w / 2,
-      top: anchor.dy - 78,
+      left: left,
+      top: top,
       width: w,
       child: Column(
         mainAxisSize: MainAxisSize.min,
