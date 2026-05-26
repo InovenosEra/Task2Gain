@@ -25,6 +25,13 @@ prod writes, no destructive ops.
 - [ ] Guard placement against off-grid / duplicate coords (already partly covered).
 - [x] Defensive null/format handling in city parsing (fuzz-ish tests).
 
+## More polish (replenished)
+- [ ] Show XP reward alongside token cost on build-tray items.
+- [ ] Gentle scale-in animation for build-tray items.
+- [ ] App version line in the settings sheet.
+- [ ] More CityService edge tests (move no-op same cell; level-1 remove refund).
+- [ ] Confirm 100% Hebrew strings (no stray English in city UI).
+
 ## Performance
 - [x] CityGame.render allocates sets/lists every frame — cache occupied set when
       buildings change instead of per-frame.
