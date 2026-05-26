@@ -383,6 +383,34 @@ class _CityScreenState extends State<CityScreen>
                     _stat('מבנים', '${buildings.length}', AppPalette.sky),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Builder(builder: (_) {
+                  final remaining =
+                      kCityValuePerLevel - (_city.cityValue % kCityValuePerLevel);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppPalette.gold.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: AppPalette.gold.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('🎯', style: TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'עוד $remaining ערך עד רמה ${_city.cityLevel + 1}',
+                            style: bodyFont(
+                                size: 13, weight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
                 if (entries.isNotEmpty) ...[
                   const SizedBox(height: 18),
                   Text('המבנים שלך',
