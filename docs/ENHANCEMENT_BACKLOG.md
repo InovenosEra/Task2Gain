@@ -9,7 +9,7 @@ prod writes, no destructive ops.
 ## Polish / feel
 - [x] Haptic feedback on successful build / upgrade / move / remove.
 - [x] Large-number formatting for HUD counts (1,234 / 12.3K).
-- [ ] Animate currency chips with a brief pulse/flash when they increase.
+- [x] Animate currency chips with a brief pulse/flash when they increase.
 - [ ] Accessibility: Semantics labels on icon-only buttons (gear, rail, build, +).
 - [ ] Pause the Flame game when the app is backgrounded (lifecycle).
 

@@ -1079,7 +1079,7 @@ class _GearButton extends StatelessWidget {
   }
 }
 
-class _CurrencyChip extends StatelessWidget {
+class _CurrencyChip extends StatefulWidget {
   const _CurrencyChip({
     required this.value,
     required this.label,
@@ -1097,7 +1097,44 @@ class _CurrencyChip extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  State<_CurrencyChip> createState() => _CurrencyChipState();
+}
+
+class _CurrencyChipState extends State<_CurrencyChip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 420));
+  late final Animation<double> _scale = TweenSequence<double>([
+    TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.32)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 45),
+    TweenSequenceItem(
+        tween: Tween(begin: 1.32, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 55),
+  ]).animate(_pulse);
+
+  @override
+  void didUpdateWidget(_CurrencyChip old) {
+    super.didUpdateWidget(old);
+    if (widget.value > old.value) _pulse.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final value = widget.value;
+    final label = widget.label;
+    final icon = widget.icon;
+    final iconColor = widget.iconColor;
+    final onPlus = widget.onPlus;
+    final onTap = widget.onTap;
     // RTL row: first child renders on the right. We want the "+" on the left
     // and the coloured icon badge on the right, number/label between.
     return Container(
@@ -1143,11 +1180,15 @@ class _CurrencyChip extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 6),
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle),
-            child: Icon(icon, color: Colors.white, size: 19),
+          ScaleTransition(
+            scale: _scale,
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration:
+                  BoxDecoration(color: iconColor, shape: BoxShape.circle),
+              child: Icon(icon, color: Colors.white, size: 19),
+            ),
           ),
         ],
       ),
