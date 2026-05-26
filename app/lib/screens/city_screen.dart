@@ -1662,7 +1662,13 @@ class _TrayItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
+      child: TweenAnimationBuilder<double>(
+        // A gentle scale-in when the tray opens (items build fresh each open).
+        tween: Tween(begin: 0.85, end: 1.0),
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutBack,
+        builder: (_, s, child) => Transform.scale(scale: s, child: child),
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         width: 76,
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1708,6 +1714,7 @@ class _TrayItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

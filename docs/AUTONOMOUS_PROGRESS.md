@@ -3,6 +3,8 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Tray scale-in + Hebrew audit** — build-tray items gently scale in when the
+  tray opens; audited city UI strings (100% Hebrew, no fixes needed). 66 tests.
 - **CityService edge tests** — move-to-same-cell no-op, level-1 remove refund.
   66 tests.
 - **Tray XP display** — build-tray items show XP reward (⭐+N) under cost.

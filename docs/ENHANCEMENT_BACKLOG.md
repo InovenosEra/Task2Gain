@@ -27,10 +27,10 @@ prod writes, no destructive ops.
 
 ## More polish (replenished)
 - [x] Show XP reward alongside token cost on build-tray items.
-- [ ] Gentle scale-in animation for build-tray items.
+- [x] Gentle scale-in animation for build-tray items.
 - [ ] App version line in the settings sheet.
 - [x] More CityService edge tests (move no-op same cell; level-1 remove refund).
-- [ ] Confirm 100% Hebrew strings (no stray English in city UI).
+- [x] Confirm 100% Hebrew strings (audited city UI — clean).
 
 ## Performance
 - [x] CityGame.render allocates sets/lists every frame — cache occupied set when
