@@ -3,6 +3,9 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Defensive parsing** — City.fromDoc / PlacedBuilding.fromMap tolerate
+  malformed Firestore data (non-list buildings, non-map entries, string/null
+  coords) without throwing; tolerant int coercion. 64 tests. (commit pending)
 - **Perf: cache occupied set** — compute occupied cells once in setBuildings
   instead of every frame in render. 63 tests. (commit pending)
 - **Lifecycle pause** — CityScreen observes app lifecycle and pauses/resumes

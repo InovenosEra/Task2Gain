@@ -23,7 +23,7 @@ prod writes, no destructive ops.
 - [ ] Graceful loading + error states for pushed sub-screens (stream errors).
 - [x] Expand unit tests: economy_config, building_catalog, City value/level edges.
 - [ ] Guard placement against off-grid / duplicate coords (already partly covered).
-- [ ] Defensive null/format handling in wallet + city parsing (fuzz-ish tests).
+- [x] Defensive null/format handling in city parsing (fuzz-ish tests).
 
 ## Performance
 - [x] CityGame.render allocates sets/lists every frame — cache occupied set when

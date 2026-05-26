@@ -25,11 +25,19 @@ class PlacedBuilding {
       {'type': typeId, 'gridX': gridX, 'gridY': gridY, 'level': level};
 
   factory PlacedBuilding.fromMap(Map<String, dynamic> m) => PlacedBuilding(
-        typeId: (m['type'] as String?) ?? '',
-        gridX: (m['gridX'] as num?)?.toInt() ?? 0,
-        gridY: (m['gridY'] as num?)?.toInt() ?? 0,
-        level: (m['level'] as num?)?.toInt() ?? 1,
+        typeId: m['type'] is String ? m['type'] as String : '',
+        gridX: _toInt(m['gridX']),
+        gridY: _toInt(m['gridY']),
+        level: _toInt(m['level'], 1),
       );
+}
+
+/// Tolerant int coercion: accepts num or numeric String, else [fallback].
+/// Firestore data can be unexpectedly typed, so parsing must never throw.
+int _toInt(dynamic v, [int fallback = 0]) {
+  if (v is num) return v.toInt();
+  if (v is String) return int.tryParse(v) ?? fallback;
+  return fallback;
 }
 
 /// Default Hebrew city names, picked deterministically from the uid so a
@@ -82,12 +90,14 @@ class City {
       buildings.indexWhere((b) => b.gridX == x && b.gridY == y);
 
   factory City.fromDoc(String uid, Map<String, dynamic>? data) {
-    final raw = (data?['buildings'] as List?)?.cast<dynamic>() ?? const [];
+    final rawList = data?['buildings'];
+    final raw = rawList is List ? rawList : const [];
     return City(
       uid: uid,
-      name: (data?['name'] as String?) ?? '',
+      name: data?['name'] is String ? data!['name'] as String : '',
       buildings: raw
-          .map((e) => PlacedBuilding.fromMap((e as Map).cast<String, dynamic>()))
+          .whereType<Map>()
+          .map((e) => PlacedBuilding.fromMap(e.cast<String, dynamic>()))
           .toList(),
     );
   }

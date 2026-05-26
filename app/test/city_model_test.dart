@@ -58,6 +58,27 @@ void main() {
     expect(c.indexAt(0, 0), -1);
   });
 
+  test('fromDoc tolerates malformed data without throwing', () {
+    // buildings not a list
+    expect(City.fromDoc('u', {'buildings': 'oops'}).buildings, isEmpty);
+    // name wrong type
+    expect(City.fromDoc('u', {'name': 42, 'buildings': []}).name, '');
+    // non-map entries and bad field types are coerced / skipped
+    final c = City.fromDoc('u', {
+      'buildings': [
+        'not-a-map',
+        {'type': 'house', 'gridX': '2', 'gridY': 3, 'level': '4'}, // string coords
+        {'type': 7, 'gridX': null, 'gridY': null}, // bad type, missing coords
+      ],
+    });
+    expect(c.buildings.length, 2); // the string entry skipped
+    expect(c.buildings[0].gridX, 2); // "2" -> 2
+    expect(c.buildings[0].level, 4); // "4" -> 4
+    expect(c.buildings[1].typeId, ''); // 7 -> ''
+    expect(c.buildings[1].gridX, 0); // null -> 0
+    expect(c.buildings[1].level, 1); // missing -> default 1
+  });
+
   test('PlacedBuilding toMap matches schema', () {
     const b = PlacedBuilding(typeId: 'park', gridX: 3, gridY: 4, level: 1);
     expect(b.toMap(), {'type': 'park', 'gridX': 3, 'gridY': 4, 'level': 1});
