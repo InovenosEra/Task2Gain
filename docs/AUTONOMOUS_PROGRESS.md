@@ -14,6 +14,7 @@ reward system, (2) loading/error states inside the big pushed sub-screens, (3)
 Cloud Functions to harden wallet credits (client-cheatable prototype rules),
 (4) real AI building sprites (pipeline ready — drop PNGs in app/assets/city/).
 
+- **Wallet-missing error tests** — place/upgrade/remove throw when no wallet doc exists. 72 tests.
 - **Upgrade surprise-bonus test** — covers the previously-untested surprise path in upgradeBuilding. 71 tests.
 - **Empty-state copy** — onboarding hint now describes the full flow (tap build, choose a building, then a tile). Verified on sim. 70 tests.
 - **Tray cheapest-first** — build tray ordered by token cost ascending so affordable basics lead. Verified on sim. 70 tests.

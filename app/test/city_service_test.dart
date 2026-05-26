@@ -64,6 +64,23 @@ void main() {
     expect(c.cityValue, 10);
   });
 
+  test('place/upgrade/remove throw when the wallet is missing', () async {
+    // 'ghost' has no wallet doc — each op checks wallet existence.
+    expect(
+      () => service.placeBuilding(
+          uid: 'ghost', typeId: 'house', gridX: 0, gridY: 0),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      () => service.upgradeBuilding(uid: 'ghost', gridX: 0, gridY: 0),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      () => service.removeBuilding(uid: 'ghost', gridX: 0, gridY: 0),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('placeBuilding rejects insufficient tokens', () async {
     await db.collection('wallets').doc('kid1').set({'tokens': 5}, SetOptions(merge: true));
     expect(
