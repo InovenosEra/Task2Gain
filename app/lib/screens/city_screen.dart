@@ -317,6 +317,116 @@ class _CityScreenState extends State<CityScreen> {
     );
   }
 
+  /// Tapping the city card opens a stats panel (with a rename action).
+  void _showCityPanel() {
+    final buildings = _city.buildings;
+    final counts = <String, int>{};
+    for (final b in buildings) {
+      counts[b.typeId] = (counts[b.typeId] ?? 0) + 1;
+    }
+    final entries = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppPalette.surface,
+      isScrollControlled: true, // landscape is short — allow a tall, scrollable sheet
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.86),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(_city.displayName,
+                          style: displayFont(size: 22, weight: FontWeight.w900)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_rounded,
+                          color: AppPalette.gold),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _renameCity();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _stat('רמה', '${_city.cityLevel}', AppPalette.gold),
+                    _stat('ערך העיר', '${_city.cityValue}', AppPalette.green),
+                    _stat('מבנים', '${buildings.length}', AppPalette.sky),
+                  ],
+                ),
+                if (entries.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  Text('המבנים שלך',
+                      style: bodyFont(size: 13, color: Colors.white60)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final e in entries)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${buildingTypeById(e.key)?.icon ?? '🏠'} '
+                            '${buildingTypeById(e.key)?.displayName ?? e.key} '
+                            '×${e.value}',
+                            style: bodyFont(size: 13),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+    );
+  }
+
+  Widget _stat(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Text(value,
+                style: displayFont(
+                    size: 22, weight: FontWeight.w900, color: color)),
+            const SizedBox(height: 2),
+            Text(label, style: bodyFont(size: 11, color: Colors.white60)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _renameCity() async {
     final controller = TextEditingController(text: _city.name);
     final name = await showDialog<String>(
@@ -759,7 +869,7 @@ class _CityScreenState extends State<CityScreen> {
             level: _city.cityLevel,
             valueInLevel: _city.cityValue % kCityValuePerLevel,
             step: kCityValuePerLevel,
-            onTap: _renameCity,
+            onTap: _showCityPanel,
           ),
         ),
 

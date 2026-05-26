@@ -3,6 +3,9 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **City stats panel** — tap the city card to open a scrollable sheet: level,
+  city value, building count + per-type breakdown, with a rename action.
+  Verified on sim. 63 tests. (commit pending)
 - **Test coverage** — catalog completeness (all 14 ids), City.cityValue ignores
   unknown types, indexAt hit/miss. 63 tests. (commit pending)
 - **Daily reward** — once-per-day +15 token bonus, date-guarded, injectable

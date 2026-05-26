@@ -15,7 +15,7 @@ prod writes, no destructive ops.
 
 ## Gameplay
 - [x] Daily reward: once-per-day token bonus with a claim popup (date-guarded; TDD).
-- [ ] City stats sheet: building count, city value, breakdown by type (read-only).
+- [x] City stats sheet: building count, city value, breakdown by type (read-only).
 - [ ] Prize/milestone teaser tying city level to the existing reward system.
 - [ ] Quest shortcut: surface count of tasks ready to claim near the rail.
 
