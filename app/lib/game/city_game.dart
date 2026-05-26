@@ -82,7 +82,7 @@ class CityGame extends FlameGame with TapCallbacks {
     if (b != null) {
       final style = _styles[b.typeId];
       if (style != null && style.kind == _Kind.building) {
-        final h = style.baseH + (b.level - 1) * style.perLevel;
+        final h = (style.baseH + (b.level - 1) * style.perLevel) * _hScale;
         lift = h + (style.roof == _Roof.pyramid ? h * 0.5 + 22 : 16);
       }
     }
@@ -94,8 +94,12 @@ class CityGame extends FlameGame with TapCallbacks {
   /// a partial art set still runs.
   final Map<String, Sprite> _sprites = {};
 
-  static const double tileW = 60;
-  static const double tileH = 30;
+  // Tile size is responsive (set in onGameResize) so the isometric diamond
+  // fills the screen width. Slightly flatter than 2:1 so a full-width board
+  // still fits the short landscape height.
+  double tileW = 60;
+  double tileH = 28;
+  double _hScale = 1.0; // building-height scale, tracks tile size
 
   Vector2 _origin = Vector2.zero();
 
@@ -267,10 +271,16 @@ class CityGame extends FlameGame with TapCallbacks {
   @override
   void onGameResize(Vector2 size) {
     super.onGameResize(size);
-    // Centre the diamond; scale the vertical anchor to the grid so a larger
-    // city still fits between the HUD and the bottom edge.
-    final topFactor = gridSize >= 10 ? 0.16 : 0.22;
-    _origin = Vector2(size.x / 2, size.y * topFactor);
+    // Scale tiles so the isometric diamond fills (almost) the full screen
+    // width; flatten the iso ratio so the full-width board still fits the
+    // short landscape height, leaving headroom up top for tall buildings.
+    tileW = size.x * 0.98 / gridSize;
+    tileH = tileW * 0.42;
+    _hScale = tileW / 60.0; // keep building heights proportionate to tile size
+    final diamondH = gridSize * tileH;
+    // Bias the diamond a little below centre so back-row buildings have room
+    // to rise into the upper area without fully hiding behind the HUD.
+    _origin = Vector2(size.x / 2, (size.y - diamondH) / 2 + size.y * 0.06);
     if (_clouds.isEmpty) {
       for (var i = 0; i < 5; i++) {
         _clouds.add(_Cloud(
@@ -608,7 +618,7 @@ class CityGame extends FlameGame with TapCallbacks {
 
   /// A walled building with windows and a pyramid or flat roof.
   void _drawTower(Canvas canvas, PlacedBuilding b, _Style style) {
-    final h = style.baseH + (b.level - 1) * style.perLevel;
+    final h = (style.baseH + (b.level - 1) * style.perLevel) * _hScale;
     const inset = 0.14;
     final x0 = b.gridX + inset, x1 = b.gridX + 1 - inset;
     final y0 = b.gridY + inset, y1 = b.gridY + 1 - inset;
