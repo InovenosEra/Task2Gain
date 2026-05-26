@@ -99,6 +99,8 @@ class _CityScreenState extends State<CityScreen>
       }
       _lastCityLevel = level;
       if (mounted) setState(() {});
+    }, onError: (_) {
+      // Transient Firestore error — keep the last good city state on screen.
     });
     // Track the token balance so the build tray can dim what's unaffordable.
     _walletSub = FirebaseFirestore.instance
@@ -108,7 +110,7 @@ class _CityScreenState extends State<CityScreen>
         .listen((s) {
       final t = (s.data()?['tokens'] as num?)?.toInt() ?? 0;
       if (t != _tokens && mounted) setState(() => _tokens = t);
-    });
+    }, onError: (_) {/* keep last known balance */});
     // Surface the daily reward if it hasn't been claimed today.
     _cityService.isDailyRewardAvailable(widget.data.uid).then((available) {
       if (available && mounted) setState(() => _dailyAvailable = true);
