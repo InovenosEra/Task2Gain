@@ -3,6 +3,8 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Accessibility** — Semantics(button+label) on icon-only controls: gear,
+  currency "+", popup move/remove. 63 tests. (commit pending)
 - **Fix: sprite-loader exception** — consult AssetManifest and only load
   sprites that are actually bundled, so missing PNGs no longer throw an
   unhandled "Unable to load asset" exception at startup. Verified gone on sim.

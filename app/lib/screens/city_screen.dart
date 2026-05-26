@@ -660,29 +660,37 @@ class _CityScreenState extends State<CityScreen> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: _startMove,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8EBF6),
-                          borderRadius: BorderRadius.circular(12),
+                    Semantics(
+                      button: true,
+                      label: 'העברת מבנה',
+                      child: GestureDetector(
+                        onTap: _startMove,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8EBF6),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.open_with_rounded,
+                              size: 18, color: _Chrome.avatar),
                         ),
-                        child: const Icon(Icons.open_with_rounded,
-                            size: 18, color: _Chrome.avatar),
                       ),
                     ),
                     const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: _removeSelected,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFDE7EC),
-                          borderRadius: BorderRadius.circular(12),
+                    Semantics(
+                      button: true,
+                      label: 'הסרת מבנה',
+                      child: GestureDetector(
+                        onTap: _removeSelected,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFDE7EC),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.delete_outline_rounded,
+                              size: 18, color: AppPalette.pink),
                         ),
-                        child: const Icon(Icons.delete_outline_rounded,
-                            size: 18, color: AppPalette.pink),
                       ),
                     ),
                   ],
@@ -1059,21 +1067,27 @@ class _GearButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTap(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          color: _Chrome.card,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-                color: Color(0x33000000), blurRadius: 10, offset: Offset(0, 4)),
-          ],
+    return Semantics(
+      button: true,
+      label: 'הגדרות',
+      child: ScaleTap(
+        onTap: onTap,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: const BoxDecoration(
+            color: _Chrome.card,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4)),
+            ],
+          ),
+          child: const Icon(Icons.settings_rounded,
+              color: _Chrome.inkSoft, size: 24),
         ),
-        child: const Icon(Icons.settings_rounded,
-            color: _Chrome.inkSoft, size: 24),
       ),
     );
   }
@@ -1201,7 +1215,10 @@ class _PlusButton extends StatelessWidget {
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
-    return ScaleTap(
+    return Semantics(
+      button: true,
+      label: 'הרווחת עוד',
+      child: ScaleTap(
       onTap: onTap,
       child: Container(
         width: 26,
@@ -1215,6 +1232,7 @@ class _PlusButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(13),
         ),
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 19),
+      ),
       ),
     );
   }
