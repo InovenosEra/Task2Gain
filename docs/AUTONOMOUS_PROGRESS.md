@@ -14,6 +14,7 @@ reward system, (2) loading/error states inside the big pushed sub-screens, (3)
 Cloud Functions to harden wallet credits (client-cheatable prototype rules),
 (4) real AI building sprites (pipeline ready — drop PNGs in app/assets/city/).
 
+- **Build button cancel label** — the build button reads ביטול (not בנייה) when in its cancel (✕) state. 66 tests.
 - **Upgrade affordability** — the upgrade button dims when its cost exceeds the balance (consistent with the tray). Verified on sim. 66 tests.
 - **Tray affordability** — build-tray items beyond the token balance are dimmed. Verified on sim. 66 tests.
 - **School clock + banner-collision guard** — schools get a clock face; daily/level-up/moving banners are now mutually exclusive. 66 tests.

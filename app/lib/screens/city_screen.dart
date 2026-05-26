@@ -1605,7 +1605,7 @@ class _BuildButton extends StatelessWidget {
                 color: Colors.white, size: 32),
           ),
           const SizedBox(height: 4),
-          Text('בנייה',
+          Text(active ? 'ביטול' : 'בנייה',
               style: displayFont(
                   size: 12,
                   weight: FontWeight.w900,
