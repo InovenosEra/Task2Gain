@@ -3,6 +3,7 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Apartment rooftop unit** — small mechanical unit detail on apartment roofs. 66 tests.
 - **Tray scale-in + Hebrew audit** — build-tray items gently scale in when the
   tray opens; audited city UI strings (100% Hebrew, no fixes needed). 66 tests.
 - **CityService edge tests** — move-to-same-cell no-op, level-1 remove refund.

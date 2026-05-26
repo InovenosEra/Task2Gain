@@ -715,6 +715,25 @@ class CityGame extends FlameGame with TapCallbacks {
       _face(canvas, [rim[1], rim[2], l(2), l(1)], _shade(roofC, 0.7));
       _face(canvas, [rim[2], rim[3], l(3), l(2)], _shade(roofC, 0.85));
       _face(canvas, [l(0), l(1), l(2), l(3)], _shade(roofC, 1.12));
+      // Apartment: a small rooftop mechanical unit.
+      if (b.typeId == 'apartment') {
+        final r = _iso((x0 + x1) / 2, (y0 + y1) / 2, h);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+                center: Offset(r.dx, r.dy - 5), width: 16, height: 10),
+            const Radius.circular(2),
+          ),
+          Paint()..color = const Color(0xFFBFC4CE),
+        );
+        canvas.drawLine(
+          Offset(r.dx - 5, r.dy - 5),
+          Offset(r.dx + 5, r.dy - 5),
+          Paint()
+            ..color = const Color(0xFF9AA1AC)
+            ..strokeWidth = 1.5,
+        );
+      }
       // Factory: two short smokestacks puffing smoke.
       if (b.typeId == 'factory') {
         final s1 = _iso(x0 + 0.30, y0 + 0.30, h);
