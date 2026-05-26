@@ -1501,7 +1501,10 @@ class _RailButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTap(
+    return Semantics(
+      button: true,
+      label: label,
+      child: ScaleTap(
       onTap: onTap,
       child: Stack(
         clipBehavior: Clip.none,
@@ -1535,6 +1538,7 @@ class _RailButton extends StatelessWidget {
           ),
           if (badge != null) Positioned(top: -5, left: -5, child: badge!),
         ],
+      ),
       ),
     );
   }
