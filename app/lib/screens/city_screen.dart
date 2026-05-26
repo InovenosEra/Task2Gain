@@ -52,7 +52,8 @@ class CityScreen extends StatefulWidget {
   State<CityScreen> createState() => _CityScreenState();
 }
 
-class _CityScreenState extends State<CityScreen> {
+class _CityScreenState extends State<CityScreen>
+    with WidgetsBindingObserver {
   final CityService _cityService = CityService();
   late final CityGame _game;
   StreamSubscription<City>? _citySub;
@@ -73,6 +74,7 @@ class _CityScreenState extends State<CityScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _game = CityGame(onCellTapped: _onCellTapped);
     _citySub = _cityService.watchCity(widget.data.uid).listen((city) {
       _city = city;
@@ -118,7 +120,19 @@ class _CityScreenState extends State<CityScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Pause the Flame loop (clouds/birds/animations) when backgrounded so it
+    // doesn't burn CPU/battery; resume when the app comes back.
+    if (state == AppLifecycleState.resumed) {
+      _game.resumeEngine();
+    } else {
+      _game.pauseEngine();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _levelUpTimer?.cancel();
     _citySub?.cancel();
     super.dispose();

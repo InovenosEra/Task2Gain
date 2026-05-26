@@ -11,7 +11,7 @@ prod writes, no destructive ops.
 - [x] Large-number formatting for HUD counts (1,234 / 12.3K).
 - [x] Animate currency chips with a brief pulse/flash when they increase.
 - [x] Accessibility: Semantics labels on icon-only buttons (gear, build, +, move, remove).
-- [ ] Pause the Flame game when the app is backgrounded (lifecycle).
+- [x] Pause the Flame game when the app is backgrounded (lifecycle).
 
 ## Gameplay
 - [x] Daily reward: once-per-day token bonus with a claim popup (date-guarded; TDD).

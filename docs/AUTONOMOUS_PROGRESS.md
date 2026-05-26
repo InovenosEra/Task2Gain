@@ -3,6 +3,9 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Lifecycle pause** — CityScreen observes app lifecycle and pauses/resumes
+  the Flame engine on background/foreground (saves CPU/battery). 63 tests.
+  (commit pending)
 - **Accessibility** — Semantics(button+label) on icon-only controls: gear,
   currency "+", popup move/remove. 63 tests. (commit pending)
 - **Fix: sprite-loader exception** — consult AssetManifest and only load
