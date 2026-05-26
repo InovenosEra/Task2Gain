@@ -35,6 +35,19 @@ void main() {
     expect((w['lifetimeEarned'] as Map)['tokens'], 5);
   });
 
+  test('upgrade surprise bonus credits extra tokens when the roll hits',
+      () async {
+    // place with no surprise (rng 1.0): tokens 90
+    await service.placeBuilding(uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0);
+    final lucky = CityService(firestore: db, rng: () => 0.0);
+    final result = await lucky.upgradeBuilding(uid: 'kid1', gridX: 0, gridY: 0);
+
+    expect(result.bonusTokens, 5);
+    final w = (await db.collection('wallets').doc('kid1').get()).data()!;
+    expect(w['tokens'], 75); // 90 - 20 upgrade cost + 5 surprise
+    expect((w['lifetimeEarned'] as Map)['tokens'], 5);
+  });
+
   test('placeBuilding debits tokens, credits XP, persists building', () async {
     await service.placeBuilding(
         uid: 'kid1', typeId: 'house', gridX: 0, gridY: 0); // cost 10, xp 8
