@@ -26,7 +26,7 @@ prod writes, no destructive ops.
 - [x] Defensive null/format handling in city parsing (fuzz-ish tests).
 
 ## More polish (replenished)
-- [ ] Show XP reward alongside token cost on build-tray items.
+- [x] Show XP reward alongside token cost on build-tray items.
 - [ ] Gentle scale-in animation for build-tray items.
 - [ ] App version line in the settings sheet.
 - [ ] More CityService edge tests (move no-op same cell; level-1 remove refund).

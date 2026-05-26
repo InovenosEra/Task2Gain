@@ -1624,7 +1624,7 @@ class _BuildTray extends StatelessWidget {
                 style: bodyFont(size: 11, color: _Chrome.inkSoft)),
             const SizedBox(height: 6),
             SizedBox(
-              height: 96,
+              height: 108,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1691,6 +1691,19 @@ class _TrayItem extends StatelessWidget {
                 Text('${type.baseTokenCost}',
                     style: displayFont(
                         size: 12, weight: FontWeight.w900, color: _Chrome.ink)),
+              ],
+            ),
+            // XP reward earned on building this type.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.star_rounded, size: 10, color: _Chrome.star),
+                const SizedBox(width: 1),
+                Text('+${type.baseXpReward}',
+                    style: bodyFont(
+                        size: 10,
+                        weight: FontWeight.w800,
+                        color: _Chrome.star)),
               ],
             ),
           ],

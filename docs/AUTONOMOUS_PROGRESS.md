@@ -3,6 +3,7 @@
 Running log of overnight autonomous enhancements. Newest at top. Each entry:
 what changed, verification, commit.
 
+- **Tray XP display** — build-tray items show XP reward (⭐+N) under cost.
 - **Milestone teaser** — city stats panel shows next-level goal. 64 tests.
 - **Defensive parsing** — City.fromDoc / PlacedBuilding.fromMap tolerate
   malformed Firestore data (non-list buildings, non-map entries, string/null
