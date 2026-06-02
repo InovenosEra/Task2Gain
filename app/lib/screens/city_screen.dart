@@ -942,11 +942,13 @@ class _CityScreenState extends State<CityScreen>
           ),
         ),
 
-        // Top-right: city card (name + progress + level + avatar). Extra
-        // corner clearance so the rounded display corner never clips it.
+        // Top-right: city card (name + progress + level + avatar). The insets
+        // must clear the rounded display corner (radius ~55pt on Pro models):
+        // a point within ~18pt of *both* the top and right edges falls inside
+        // the corner curve and gets clipped, so keep both >= ~18.
         Positioned(
-          top: 10,
-          right: 16,
+          top: 18,
+          right: 20,
           child: _CityCard(
             name: _city.displayName,
             level: _city.cityLevel,
