@@ -52,143 +52,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 12),
-                  Center(
-                    child: _FloatingLogo(controller: _floatController),
-                  ),
-                  const SizedBox(height: 22),
-                  _Reveal(
-                    controller: _enterController,
-                    interval: const Interval(0.0, 0.6,
-                        curve: Curves.easeOutCubic),
-                    child: GradientText(
-                      'Task2Play',
-                      style: displayFont(
-                        size: 48,
-                        weight: FontWeight.w900,
-                        letterSpacing: -1,
-                      ),
-                      colors: AppPalette.heroGrad,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _Reveal(
-                    controller: _enterController,
-                    interval: const Interval(0.1, 0.7,
-                        curve: Curves.easeOutCubic),
-                    child: Text(
-                      'משימות שמרגישות כמו משחק',
-                      textAlign: TextAlign.center,
-                      style: bodyFont(
-                        size: 15,
-                        color: Colors.white60,
-                        weight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  _StaggeredFeature(
-                    controller: _enterController,
-                    delay: 0.2,
-                    icon: '⚡',
-                    title: 'משימות יומיות',
-                    subtitle: 'שהופכות לנקודות אמיתיות',
-                    tint: AppPalette.green,
-                  ),
-                  const SizedBox(height: 10),
-                  _StaggeredFeature(
-                    controller: _enterController,
-                    delay: 0.32,
-                    icon: '💰',
-                    title: 'ארנק אמיתי',
-                    subtitle: 'המרת נקודות לכסף שאפשר להשתמש בו',
-                    tint: AppPalette.gold,
-                  ),
-                  const SizedBox(height: 10),
-                  _StaggeredFeature(
-                    controller: _enterController,
-                    delay: 0.44,
-                    icon: '🏆',
-                    title: 'רמות, רצפים, לוח מובילים',
-                    subtitle: 'כל קווסט מקרב אתכם להישגים חדשים',
-                    tint: AppPalette.pink,
-                  ),
-                  const Spacer(),
-                  _Reveal(
-                    controller: _enterController,
-                    interval: const Interval(0.55, 1.0,
-                        curve: Curves.easeOutCubic),
-                    child: ScaleTap(
-                      onTap: () => context
-                          .pushFadeUp((_) => const SignupScreen()),
-                      child: Container(
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 18),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(22),
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppPalette.gold,
-                              AppPalette.goldDeep,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppPalette.gold
-                                  .withValues(alpha: 0.5),
-                              blurRadius: 26,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            'יאללה, מתחילים!',
-                            style: displayFont(
-                              size: 20,
-                              weight: FontWeight.w900,
-                              color: AppPalette.bgDeep,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _Reveal(
-                    controller: _enterController,
-                    interval: const Interval(0.7, 1.0,
-                        curve: Curves.easeOutCubic),
-                    child: Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _LinkButton(
-                          label: 'כבר יש לי חשבון',
-                          onTap: () => context.pushFadeUp(
-                              (_) => const LoginScreen()),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 14,
-                          color: Colors.white24,
-                        ),
-                        _LinkButton(
-                          label: 'יש לי קוד הזמנה',
-                          onTap: () => context.pushFadeUp(
-                              (_) => const JoinWithCodeScreen()),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Landscape-locked app: when there's more width than
+                  // height, split branding (left) from actions (right) so
+                  // nothing overflows the short landscape viewport.
+                  final isWide = constraints.maxWidth > constraints.maxHeight;
+                  return isWide
+                      ? _buildWide(context)
+                      : _buildTall(context);
+                },
               ),
             ),
           ),
@@ -196,6 +69,174 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       ),
     );
   }
+
+  /// Landscape: branding on one side, actions on the other.
+  Widget _buildWide(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _FloatingLogo(controller: _floatController),
+              const SizedBox(height: 12),
+              _wordmark(),
+              const SizedBox(height: 8),
+              _tagline(),
+            ],
+          ),
+        ),
+        const SizedBox(width: 24),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 8),
+                ..._features(),
+                const SizedBox(height: 18),
+                _cta(context),
+                const SizedBox(height: 12),
+                _links(context),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Portrait fallback: single scrollable column.
+  Widget _buildTall(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 12),
+          Center(child: _FloatingLogo(controller: _floatController)),
+          const SizedBox(height: 22),
+          _wordmark(),
+          const SizedBox(height: 8),
+          _tagline(),
+          const SizedBox(height: 30),
+          ..._features(),
+          const SizedBox(height: 30),
+          _cta(context),
+          const SizedBox(height: 12),
+          _links(context),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _wordmark() => _Reveal(
+        controller: _enterController,
+        interval: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
+        child: GradientText(
+          'Task2Play',
+          style: displayFont(size: 48, weight: FontWeight.w900,
+              letterSpacing: -1),
+          colors: AppPalette.heroGrad,
+          textAlign: TextAlign.center,
+        ),
+      );
+
+  Widget _tagline() => _Reveal(
+        controller: _enterController,
+        interval: const Interval(0.1, 0.7, curve: Curves.easeOutCubic),
+        child: Text(
+          'משימות שמרגישות כמו משחק',
+          textAlign: TextAlign.center,
+          style: bodyFont(size: 15, color: Colors.white60,
+              weight: FontWeight.w500),
+        ),
+      );
+
+  List<Widget> _features() => [
+        _StaggeredFeature(
+          controller: _enterController,
+          delay: 0.2,
+          icon: '⚡',
+          title: 'משימות יומיות',
+          subtitle: 'שהופכות לנקודות אמיתיות',
+          tint: AppPalette.green,
+        ),
+        const SizedBox(height: 10),
+        _StaggeredFeature(
+          controller: _enterController,
+          delay: 0.32,
+          icon: '💰',
+          title: 'ארנק אמיתי',
+          subtitle: 'המרת נקודות לכסף שאפשר להשתמש בו',
+          tint: AppPalette.gold,
+        ),
+        const SizedBox(height: 10),
+        _StaggeredFeature(
+          controller: _enterController,
+          delay: 0.44,
+          icon: '🏆',
+          title: 'רמות, רצפים, לוח מובילים',
+          subtitle: 'כל קווסט מקרב אתכם להישגים חדשים',
+          tint: AppPalette.pink,
+        ),
+      ];
+
+  Widget _cta(BuildContext context) => _Reveal(
+        controller: _enterController,
+        interval: const Interval(0.55, 1.0, curve: Curves.easeOutCubic),
+        child: ScaleTap(
+          onTap: () => context.pushFadeUp((_) => const SignupScreen()),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              gradient: const LinearGradient(
+                colors: [AppPalette.gold, AppPalette.goldDeep],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppPalette.gold.withValues(alpha: 0.5),
+                  blurRadius: 26,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                'יאללה, מתחילים!',
+                style: displayFont(size: 20, weight: FontWeight.w900,
+                    color: AppPalette.bgDeep),
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _links(BuildContext context) => _Reveal(
+        controller: _enterController,
+        interval: const Interval(0.7, 1.0, curve: Curves.easeOutCubic),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _LinkButton(
+              label: 'כבר יש לי חשבון',
+              onTap: () => context.pushFadeUp((_) => const LoginScreen()),
+            ),
+            Container(width: 1, height: 14, color: Colors.white24),
+            _LinkButton(
+              label: 'יש לי קוד הזמנה',
+              onTap: () =>
+                  context.pushFadeUp((_) => const JoinWithCodeScreen()),
+            ),
+          ],
+        ),
+      );
 }
 
 /// Wraps a child in a fade + slide-up animation tied to a parent controller

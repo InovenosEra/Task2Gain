@@ -92,7 +92,10 @@ class _SignupScreenState extends State<SignupScreen> {
         backgroundColor: AppPalette.bgDeep,
         body: ScreenBackground(
           child: SafeArea(
-            child: SingleChildScrollView(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Form(
@@ -209,6 +212,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
+                ),
+              ),
                 ),
               ),
             ),
