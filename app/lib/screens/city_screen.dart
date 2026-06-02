@@ -958,9 +958,10 @@ class _CityScreenState extends State<CityScreen>
           ),
         ),
 
-        // Right rail: tasks / shop / family.
+        // Right rail: tasks / shop / family. Right inset matches the city
+        // card (20) so their right edges line up vertically.
         Positioned(
-          right: 10,
+          right: 20,
           top: 92,
           bottom: 92,
           child: Center(
