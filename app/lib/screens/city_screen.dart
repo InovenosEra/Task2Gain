@@ -14,6 +14,7 @@ import '../services/city_service.dart';
 import '../services/quest_instance_service.dart';
 import '../theme/app_theme.dart';
 import '../util/format.dart';
+import '../widgets/city_name_dialog.dart';
 import '../widgets/scale_tap.dart';
 import '../widgets/screen_background.dart';
 import 'admin_screen.dart';
@@ -513,40 +514,11 @@ class _CityScreenState extends State<CityScreen>
   }
 
   Future<void> _renameCity() async {
-    final controller = TextEditingController(text: _city.name);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          backgroundColor: AppPalette.surface,
-          title: Text('שם העיר', style: displayFont(size: 18)),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLength: 24,
-            textAlign: TextAlign.right,
-            style: bodyFont(size: 16),
-            decoration: InputDecoration(
-              hintText: _city.displayName,
-              hintStyle: bodyFont(size: 16, color: Colors.white38),
-            ),
-            onSubmitted: (v) => Navigator.of(ctx).pop(v),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('ביטול', style: bodyFont(color: Colors.white60)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(controller.text),
-              child: Text('שמירה', style: bodyFont(color: AppPalette.gold)),
-            ),
-          ],
-        ),
-      ),
+    final name = await showCityNameDialog(
+      context,
+      initialName: _city.name,
+      hint: _city.displayName,
     );
-    controller.dispose();
     if (name != null && name.trim().isNotEmpty) {
       await _cityService.renameCity(widget.data.uid, name);
     }
