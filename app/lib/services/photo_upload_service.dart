@@ -28,4 +28,18 @@ class PhotoUploadService {
     );
     return task.ref.getDownloadURL();
   }
+
+  /// Uploads a profile avatar under `avatars/{uid}/avatar.jpg` and returns its
+  /// download URL. The caller must be signed in as [uid] (enforced by rules).
+  Future<String> uploadAvatar({
+    required String uid,
+    required File file,
+  }) async {
+    final ref = _storage.ref().child('avatars').child(uid).child('avatar.jpg');
+    final task = await ref.putFile(
+      file,
+      SettableMetadata(contentType: 'image/jpeg'),
+    );
+    return task.ref.getDownloadURL();
+  }
 }

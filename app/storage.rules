@@ -38,6 +38,18 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
+    // ---------------- profile avatars ----------------
+    match /avatars/{uid}/{file} {
+      // Any signed-in user can view avatars (family lists, leaderboard, etc.).
+      allow read: if isSignedIn();
+
+      // Only the owner can write their own avatar.
+      allow write: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
     // Default deny for anything else.
     match /{allPaths=**} {
       allow read, write: if false;

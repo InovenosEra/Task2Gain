@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../services/auth_service.dart';
 import '../widgets/avatar_picker.dart';
@@ -25,6 +28,25 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _error;
   bool _passwordHidden = true;
   String _avatar = adultAvatars.first;
+  File? _avatarFile;
+  final _picker = ImagePicker();
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final xfile = await _picker.pickImage(
+        source: source,
+        imageQuality: 75,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+      if (xfile == null) return;
+      setState(() => _avatarFile = File(xfile.path));
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'לא הצלחנו לפתוח את התמונה');
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -49,6 +71,7 @@ class _SignupScreenState extends State<SignupScreen> {
         parentDisplayName: _parentNameController.text.trim(),
         familyName: _familyNameController.text.trim(),
         avatar: _avatar,
+        avatarFile: _avatarFile,
       );
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
@@ -126,8 +149,12 @@ class _SignupScreenState extends State<SignupScreen> {
                                     light: true,
                                     bubbleSize: 46,
                                     selected: _avatar,
-                                    onSelect: (v) =>
-                                        setState(() => _avatar = v),
+                                    photoFile: _avatarFile,
+                                    onPickPhoto: _pickPhoto,
+                                    onSelect: (v) => setState(() {
+                                      _avatar = v;
+                                      _avatarFile = null;
+                                    }),
                                     options: adultAvatars,
                                   ),
                                   const SizedBox(height: 14),

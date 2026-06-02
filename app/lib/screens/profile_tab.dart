@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../services/photo_upload_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/avatar_picker.dart';
 import '../widgets/page_routes.dart';
@@ -42,7 +46,12 @@ class ProfileTab extends StatelessWidget {
                   ]),
                 ),
               ),
-              AvatarBubble(emoji: data.avatar, size: 108),
+              _EditableAvatar(
+                uid: data.uid,
+                fallback: data.avatar,
+                emojiOptions:
+                    data.role == 'admin' ? adultAvatars : kidAvatars,
+              ),
             ],
           ),
         ),
@@ -139,6 +148,227 @@ class ProfileTab extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Big profile avatar that reflects the live `users/{uid}.avatar` and lets the
+/// owner change it — snap a photo, pick from the gallery, or choose an emoji.
+class _EditableAvatar extends StatefulWidget {
+  const _EditableAvatar({
+    required this.uid,
+    required this.fallback,
+    required this.emojiOptions,
+  });
+  final String uid;
+  final String fallback;
+  final List<String> emojiOptions;
+
+  @override
+  State<_EditableAvatar> createState() => _EditableAvatarState();
+}
+
+class _EditableAvatarState extends State<_EditableAvatar> {
+  final _picker = ImagePicker();
+  bool _busy = false;
+
+  DocumentReference<Map<String, dynamic>> get _userRef =>
+      FirebaseFirestore.instance.collection('users').doc(widget.uid);
+
+  Future<void> _setEmoji(String emoji) =>
+      _userRef.update({'avatar': {'type': 'preset', 'value': emoji}});
+
+  Future<void> _pickAndUpload(ImageSource source) async {
+    final xfile = await _picker.pickImage(
+      source: source,
+      imageQuality: 75,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
+    if (xfile == null) return;
+    setState(() => _busy = true);
+    try {
+      final url = await PhotoUploadService()
+          .uploadAvatar(uid: widget.uid, file: File(xfile.path));
+      await _userRef.update({'avatar': {'type': 'photo', 'value': url}});
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('העלאת התמונה נכשלה, נסה שוב')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _openSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppPalette.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetCtx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 16, 20, 16 + MediaQuery.of(sheetCtx).padding.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('תמונת הפרופיל',
+                  style: displayFont(size: 18, weight: FontWeight.w900)),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SheetAction(
+                      emoji: '📷',
+                      label: 'מצלמה',
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        _pickAndUpload(ImageSource.camera);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _SheetAction(
+                      emoji: '🖼️',
+                      label: 'גלריה',
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        _pickAndUpload(ImageSource.gallery);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const FieldLabelText('או בחר אמוג׳י'),
+              const SizedBox(height: 8),
+              AvatarPicker(
+                selected: '',
+                options: widget.emojiOptions,
+                onSelect: (emoji) {
+                  Navigator.pop(sheetCtx);
+                  _setEmoji(emoji);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _busy ? null : _openSheet,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: _userRef.snapshots(),
+            builder: (context, snap) {
+              final avatarMap =
+                  (snap.data?.data()?['avatar'] as Map?)?.cast<String, dynamic>();
+              final value =
+                  (avatarMap?['value'] as String?) ?? widget.fallback;
+              return AvatarBubble(emoji: value, size: 108);
+            },
+          ),
+          if (_busy)
+            Container(
+              width: 108,
+              height: 108,
+              decoration: const BoxDecoration(
+                color: Colors.black38,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: AppPalette.gold),
+              ),
+            ),
+          // Little camera badge to signal it's editable.
+          Positioned(
+            right: 6,
+            bottom: 6,
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: AppPalette.gold,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppPalette.bgDeep, width: 2),
+              ),
+              child: const Icon(Icons.photo_camera_rounded,
+                  size: 15, color: AppPalette.bgDeep),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Square action tile used inside the avatar-edit sheet.
+class _SheetAction extends StatelessWidget {
+  const _SheetAction(
+      {required this.emoji, required this.label, required this.onTap});
+  final String emoji;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTap(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 26)),
+            const SizedBox(height: 6),
+            Text(label, style: displayFont(size: 14, weight: FontWeight.w800)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Small dimmed label used in the avatar sheet.
+class FieldLabelText extends StatelessWidget {
+  const FieldLabelText(this.text, {super.key});
+  final String text;
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: bodyFont(size: 12, color: Colors.white54, weight: FontWeight.w700),
+      );
 }
 
 class _LifetimeStrip extends StatelessWidget {

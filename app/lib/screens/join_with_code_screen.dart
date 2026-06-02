@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../services/auth_service.dart';
 import '../widgets/avatar_picker.dart';
@@ -25,6 +28,25 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
   bool _passwordHidden = true;
   String? _error;
   String _avatar = kidAvatars.first;
+  File? _avatarFile;
+  final _picker = ImagePicker();
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final xfile = await _picker.pickImage(
+        source: source,
+        imageQuality: 75,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+      if (xfile == null) return;
+      setState(() => _avatarFile = File(xfile.path));
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'לא הצלחנו לפתוח את התמונה');
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -49,6 +71,7 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
         password: _passwordController.text,
         displayName: _nameController.text.trim(),
         avatar: _avatar,
+        avatarFile: _avatarFile,
       );
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
@@ -158,7 +181,12 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
             light: true,
             bubbleSize: 42,
             selected: _avatar,
-            onSelect: (v) => setState(() => _avatar = v),
+            photoFile: _avatarFile,
+            onPickPhoto: _pickPhoto,
+            onSelect: (v) => setState(() {
+              _avatar = v;
+              _avatarFile = null;
+            }),
             options: kidAvatars,
           ),
           const SizedBox(height: 10),
