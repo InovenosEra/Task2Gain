@@ -1693,13 +1693,13 @@ class _BuildTrayState extends State<_BuildTray> {
       Row(
         children: [
           _TrayBackChip(onTap: () => setState(() => _category = null)),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Text('${cat.icon}  ${cat.displayName}',
               style: bodyFont(
-                  size: 13, weight: FontWeight.w800, color: _Chrome.ink)),
+                  size: 12, weight: FontWeight.w800, color: _Chrome.ink)),
         ],
       ),
-      const SizedBox(height: 8),
+      const SizedBox(height: 6),
       // Each category has a handful of buildings — centre them, no long scroll.
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1767,17 +1767,17 @@ class _TrayBackChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 32,
-        height: 32,
+        width: 26,
+        height: 26,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: const Color(0xFFF4F5FA),
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(9),
           border: Border.all(color: const Color(0xFFE6E7EE), width: 1.5),
         ),
         // RTL: a forward-pointing arrow reads as "back".
         child: const Icon(Icons.arrow_forward_rounded,
-            size: 19, color: _Chrome.ink),
+            size: 16, color: _Chrome.ink),
       ),
     );
   }
@@ -1810,11 +1810,11 @@ class _TrayItem extends StatelessWidget {
         opacity: affordable ? 1.0 : 0.42,
         child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        width: 74,
-        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+        width: 82,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFFFF3DA) : const Color(0xFFF4F5FA),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(13),
           border: Border.all(
             color: selected ? _Chrome.level : const Color(0xFFE6E7EE),
             width: selected ? 2 : 1.5,
@@ -1823,33 +1823,33 @@ class _TrayItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(type.icon, style: const TextStyle(fontSize: 22)),
-            const SizedBox(height: 2),
+            Text(type.icon, style: const TextStyle(fontSize: 19)),
+            const SizedBox(height: 1),
             Text(type.displayName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: bodyFont(
-                    size: 10,
+                    size: 9.5,
                     weight: FontWeight.w700,
                     color: _Chrome.ink,
                     height: 1.0)),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             // Cost and XP reward on a single compact row.
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.bolt_rounded, size: 12, color: _Chrome.bolt),
+                const Icon(Icons.bolt_rounded, size: 11, color: _Chrome.bolt),
                 Text('${type.baseTokenCost}',
                     style: displayFont(
-                        size: 11,
+                        size: 10,
                         weight: FontWeight.w900,
                         color: _Chrome.ink,
                         height: 1.0)),
-                const SizedBox(width: 5),
-                const Icon(Icons.star_rounded, size: 11, color: _Chrome.star),
+                const SizedBox(width: 4),
+                const Icon(Icons.star_rounded, size: 10, color: _Chrome.star),
                 Text('+${type.baseXpReward}',
                     style: bodyFont(
-                        size: 9.5,
+                        size: 9,
                         weight: FontWeight.w800,
                         color: _Chrome.star,
                         height: 1.0)),
