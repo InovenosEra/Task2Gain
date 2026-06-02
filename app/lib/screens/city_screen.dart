@@ -1658,7 +1658,7 @@ class _BuildTrayState extends State<_BuildTray> {
               color: Color(0x33000000), blurRadius: 18, offset: Offset(0, -2)),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 9),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1669,15 +1669,10 @@ class _BuildTrayState extends State<_BuildTray> {
   }
 
   List<Widget> _categoryView() => [
-        Text('מה בונים?',
-            textAlign: TextAlign.center,
-            style: bodyFont(
-                size: 11, weight: FontWeight.w700, color: _Chrome.inkSoft)),
-        const SizedBox(height: 8),
         Row(
           children: [
             for (var i = 0; i < kBuildingCategories.length; i++) ...[
-              if (i > 0) const SizedBox(width: 8),
+              if (i > 0) const SizedBox(width: 7),
               Expanded(
                 child: _CategoryChip(
                   category: kBuildingCategories[i],
@@ -1736,22 +1731,26 @@ class _CategoryChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
         decoration: BoxDecoration(
           color: const Color(0xFFF4F5FA),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(13),
           border: Border.all(color: const Color(0xFFE6E7EE), width: 1.5),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(category.icon, style: const TextStyle(fontSize: 25)),
-            const SizedBox(height: 3),
-            Text(category.displayName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: bodyFont(
-                    size: 10.5, weight: FontWeight.w700, color: _Chrome.ink)),
+            Text(category.icon, style: const TextStyle(fontSize: 17)),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(category.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: bodyFont(
+                      size: 10.5,
+                      weight: FontWeight.w700,
+                      color: _Chrome.ink)),
+            ),
           ],
         ),
       ),
@@ -1811,46 +1810,49 @@ class _TrayItem extends StatelessWidget {
         opacity: affordable ? 1.0 : 0.42,
         child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        width: 76,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        width: 74,
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFFFF3DA) : const Color(0xFFF4F5FA),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? _Chrome.level : const Color(0xFFE6E7EE),
             width: selected ? 2 : 1.5,
           ),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(type.icon, style: const TextStyle(fontSize: 26)),
+            Text(type.icon, style: const TextStyle(fontSize: 22)),
             const SizedBox(height: 2),
             Text(type.displayName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: bodyFont(
-                    size: 10, weight: FontWeight.w700, color: _Chrome.ink)),
+                    size: 10,
+                    weight: FontWeight.w700,
+                    color: _Chrome.ink,
+                    height: 1.0)),
+            const SizedBox(height: 4),
+            // Cost and XP reward on a single compact row.
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.bolt_rounded, size: 12, color: _Chrome.bolt),
                 Text('${type.baseTokenCost}',
                     style: displayFont(
-                        size: 12, weight: FontWeight.w900, color: _Chrome.ink)),
-              ],
-            ),
-            // XP reward earned on building this type.
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.star_rounded, size: 10, color: _Chrome.star),
-                const SizedBox(width: 1),
+                        size: 11,
+                        weight: FontWeight.w900,
+                        color: _Chrome.ink,
+                        height: 1.0)),
+                const SizedBox(width: 5),
+                const Icon(Icons.star_rounded, size: 11, color: _Chrome.star),
                 Text('+${type.baseXpReward}',
                     style: bodyFont(
-                        size: 10,
+                        size: 9.5,
                         weight: FontWeight.w800,
-                        color: _Chrome.star)),
+                        color: _Chrome.star,
+                        height: 1.0)),
               ],
             ),
           ],
