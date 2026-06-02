@@ -942,10 +942,11 @@ class _CityScreenState extends State<CityScreen>
           ),
         ),
 
-        // Top-right: city card (name + progress + level + avatar).
+        // Top-right: city card (name + progress + level + avatar). Extra
+        // corner clearance so the rounded display corner never clips it.
         Positioned(
-          top: 8,
-          right: 12,
+          top: 10,
+          right: 16,
           child: _CityCard(
             name: _city.displayName,
             level: _city.cityLevel,
@@ -1335,69 +1336,75 @@ class _CityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final frac = (valueInLevel / step).clamp(0.0, 1.0);
+    // Responsive width: a share of the screen, capped so it stays compact on
+    // big screens and never overruns the edge on small ones.
+    final w = (MediaQuery.sizeOf(context).width * 0.30).clamp(176.0, 216.0);
     return Semantics(
       button: true,
       label: '$name, רמה $level — פרטי העיר',
       child: ScaleTap(
-      onTap: onTap,
-      scale: 0.98,
-      child: Container(
-        width: 230,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: _Chrome.card,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 12,
-                offset: Offset(0, 4)),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: _Chrome.avatar,
-                borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        scale: 0.98,
+        child: Container(
+          width: w,
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+          decoration: BoxDecoration(
+            color: _Chrome.card,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 4)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _Chrome.avatar,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.location_city_rounded,
+                    color: Colors.white, size: 20),
               ),
-              child: const Icon(Icons.location_city_rounded,
-                  color: Colors.white, size: 26),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: displayFont(
-                        size: 16, weight: FontWeight.w900, color: _Chrome.ink),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      _LevelPill(level: level),
-                      const SizedBox(width: 6),
-                      Expanded(child: _ProgressBar(frac: frac)),
-                      const SizedBox(width: 4),
-                      Text('$valueInLevel/$step',
-                          style: bodyFont(
-                              size: 9.5, color: _Chrome.inkSoft, height: 1.0)),
-                    ],
-                  ),
-                ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: displayFont(
+                          size: 14,
+                          weight: FontWeight.w900,
+                          color: _Chrome.ink,
+                          height: 1.0),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        _LevelPill(level: level),
+                        const SizedBox(width: 6),
+                        Expanded(child: _ProgressBar(frac: frac)),
+                        const SizedBox(width: 4),
+                        Text('$valueInLevel/$step',
+                            style: bodyFont(
+                                size: 9, color: _Chrome.inkSoft, height: 1.0)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -1409,14 +1416,14 @@ class _LevelPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: _Chrome.level,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(9),
       ),
       child: Text('רמה $level',
           style: displayFont(
-              size: 11, weight: FontWeight.w900, color: Colors.white)),
+              size: 10, weight: FontWeight.w900, color: Colors.white)),
     );
   }
 }
@@ -1430,11 +1437,11 @@ class _ProgressBar extends StatelessWidget {
       borderRadius: BorderRadius.circular(6),
       child: Stack(
         children: [
-          Container(height: 9, color: _Chrome.track),
+          Container(height: 7, color: _Chrome.track),
           FractionallySizedBox(
             widthFactor: frac,
             child: Container(
-              height: 9,
+              height: 7,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [_Chrome.bolt, _Chrome.level],
