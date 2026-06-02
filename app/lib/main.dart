@@ -9,9 +9,9 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Landscape-only, like Clash of Clans.
+  // Landscape-only and locked to a single flip, so the camera / Dynamic
+  // Island always sits on the left edge (no mirror-flip).
   await SystemChrome.setPreferredOrientations(const [
-    DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
