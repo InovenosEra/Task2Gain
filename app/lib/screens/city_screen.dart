@@ -1001,33 +1001,31 @@ class _CityScreenState extends State<CityScreen>
             ),
           ),
 
-        // Bottom-left: build button (hammer to open, ✕ to cancel). Hug a
-        // little closer to the left edge (clear of the centred island).
-        Positioned(
-          left: 6,
-          bottom: _trayOpen ? 132 : 8,
-          child: AnimatedSlide(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutBack,
-            offset: Offset.zero,
+        // Bottom-left: build button (hammer to open, ✕ to cancel placement).
+        // Hidden while the tray is open — tapping anywhere closes the tray.
+        if (!_trayOpen)
+          Positioned(
+            left: 6,
+            bottom: 8,
             child: _BuildButton(
-              active: _trayOpen || _armedType != null || _movingCell != null,
+              active: _armedType != null || _movingCell != null,
               onTap: _toggleTray,
             ),
           ),
-        ),
 
-        // Bottom: building tray (slides up when open).
+        // Bottom: building tray. Slides up from the bottom (and back down on
+        // close). Right edge aligns with the tasks/shop/family rail.
         Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
+          left: 8,
+          right: 20,
+          bottom: 8,
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
             transitionBuilder: (child, anim) => SlideTransition(
-              position: Tween(begin: const Offset(0, 1), end: Offset.zero)
-                  .animate(anim),
-              child: child,
+              position: Tween(begin: const Offset(0, 1.2), end: Offset.zero)
+                  .animate(CurvedAnimation(
+                      parent: anim, curve: Curves.easeOutCubic)),
+              child: FadeTransition(opacity: anim, child: child),
             ),
             child: _trayOpen
                 ? _BuildTray(
@@ -1630,7 +1628,7 @@ class _BuildButton extends StatelessWidget {
   }
 }
 
-class _BuildTray extends StatelessWidget {
+class _BuildTray extends StatefulWidget {
   const _BuildTray({
     super.key,
     required this.selected,
@@ -1643,48 +1641,144 @@ class _BuildTray extends StatelessWidget {
   final ValueChanged<String> onSelect;
 
   @override
+  State<_BuildTray> createState() => _BuildTrayState();
+}
+
+class _BuildTrayState extends State<_BuildTray> {
+  String? _category; // null = showing the category list
+
+  @override
   Widget build(BuildContext context) {
-    // Show cheapest-first so affordable basics lead (helpful for new players).
-    final ordered = [...kBuildingCatalog]
-      ..sort((a, b) => a.baseTokenCost.compareTo(b.baseTokenCost));
     return Container(
       decoration: BoxDecoration(
         color: _Chrome.card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: const [
           BoxShadow(
-              color: Color(0x33000000), blurRadius: 18, offset: Offset(0, -4)),
+              color: Color(0x33000000), blurRadius: 18, offset: Offset(0, -2)),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-      child: SafeArea(
-        top: false,
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children:
+            _category == null ? _categoryView() : _itemView(_category!),
+      ),
+    );
+  }
+
+  List<Widget> _categoryView() => [
+        Text('מה בונים?',
+            textAlign: TextAlign.center,
+            style: bodyFont(
+                size: 11, weight: FontWeight.w700, color: _Chrome.inkSoft)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            for (var i = 0; i < kBuildingCategories.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: _CategoryChip(
+                  category: kBuildingCategories[i],
+                  onTap: () =>
+                      setState(() => _category = kBuildingCategories[i].id),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ];
+
+  List<Widget> _itemView(String catId) {
+    final cat = kBuildingCategories.firstWhere((c) => c.id == catId);
+    final items = [...kBuildingCatalog.where((b) => b.category == catId)]
+      ..sort((a, b) => a.baseTokenCost.compareTo(b.baseTokenCost));
+    return [
+      Row(
+        children: [
+          _TrayBackChip(onTap: () => setState(() => _category = null)),
+          const SizedBox(width: 8),
+          Text('${cat.icon}  ${cat.displayName}',
+              style: bodyFont(
+                  size: 13, weight: FontWeight.w800, color: _Chrome.ink)),
+        ],
+      ),
+      const SizedBox(height: 8),
+      // Each category has a handful of buildings — centre them, no long scroll.
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            _TrayItem(
+              type: items[i],
+              selected: items[i].id == widget.selected,
+              affordable: items[i].baseTokenCost <= widget.tokens,
+              onTap: () => widget.onSelect(items[i].id),
+            ),
+          ],
+        ],
+      ),
+    ];
+  }
+}
+
+/// A category tile in the build tray (icon + name). Tapping it reveals the
+/// buildings in that category.
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({required this.category, required this.onTap});
+  final BuildingCategory category;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF4F5FA),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE6E7EE), width: 1.5),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('בחרו מבנה ואז הקישו על משבצת',
-                style: bodyFont(size: 11, color: _Chrome.inkSoft)),
-            const SizedBox(height: 6),
-            SizedBox(
-              height: 108,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                itemCount: ordered.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, i) {
-                  final b = ordered[i];
-                  return _TrayItem(
-                    type: b,
-                    selected: b.id == selected,
-                    affordable: b.baseTokenCost <= tokens,
-                    onTap: () => onSelect(b.id),
-                  );
-                },
-              ),
-            ),
+            Text(category.icon, style: const TextStyle(fontSize: 25)),
+            const SizedBox(height: 3),
+            Text(category.displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: bodyFont(
+                    size: 10.5, weight: FontWeight.w700, color: _Chrome.ink)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Back chip shown in the item view to return to the category list.
+class _TrayBackChip extends StatelessWidget {
+  const _TrayBackChip({required this.onTap});
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF4F5FA),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: const Color(0xFFE6E7EE), width: 1.5),
+        ),
+        // RTL: a forward-pointing arrow reads as "back".
+        child: const Icon(Icons.arrow_forward_rounded,
+            size: 19, color: _Chrome.ink),
       ),
     );
   }
