@@ -5,7 +5,6 @@ import '../widgets/gradient_text.dart';
 import '../widgets/page_routes.dart';
 import '../widgets/scale_tap.dart';
 import '../widgets/screen_background.dart';
-import '../widgets/task2play_logo.dart';
 import 'join_with_code_screen.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
@@ -18,9 +17,8 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late final AnimationController _enterController;
-  late final AnimationController _floatController;
 
   @override
   void initState() {
@@ -29,16 +27,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..forward();
-    _floatController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _enterController.dispose();
-    _floatController.dispose();
     super.dispose();
   }
 
@@ -50,85 +43,42 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         backgroundColor: AppPalette.bgDeep,
         body: ScreenBackground(
           child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // Landscape-locked app: when there's more width than
-                  // height, split branding (left) from actions (right) so
-                  // nothing overflows the short landscape viewport.
-                  final isWide = constraints.maxWidth > constraints.maxHeight;
-                  return isWide
-                      ? _buildWide(context)
-                      : _buildTall(context);
-                },
-              ),
+            // Everything lives in one column, centred both axes. It only
+            // scrolls if the content can't fit the (short) landscape height.
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 28, vertical: 8),
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight - 16),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _wordmark(),
+                            const SizedBox(height: 6),
+                            _tagline(),
+                            const SizedBox(height: 12),
+                            ..._features(),
+                            const SizedBox(height: 12),
+                            _cta(context),
+                            const SizedBox(height: 6),
+                            _links(context),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  /// Landscape: branding on one side, actions on the other.
-  Widget _buildWide(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _FloatingLogo(controller: _floatController),
-              const SizedBox(height: 12),
-              _wordmark(),
-              const SizedBox(height: 8),
-              _tagline(),
-            ],
-          ),
-        ),
-        const SizedBox(width: 24),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 8),
-                ..._features(),
-                const SizedBox(height: 18),
-                _cta(context),
-                const SizedBox(height: 12),
-                _links(context),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Portrait fallback: single scrollable column.
-  Widget _buildTall(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 12),
-          Center(child: _FloatingLogo(controller: _floatController)),
-          const SizedBox(height: 22),
-          _wordmark(),
-          const SizedBox(height: 8),
-          _tagline(),
-          const SizedBox(height: 30),
-          ..._features(),
-          const SizedBox(height: 30),
-          _cta(context),
-          const SizedBox(height: 12),
-          _links(context),
-          const SizedBox(height: 8),
-        ],
       ),
     );
   }
@@ -138,7 +88,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         interval: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
         child: GradientText(
           'Task2Play',
-          style: displayFont(size: 48, weight: FontWeight.w900,
+          style: displayFont(size: 29, weight: FontWeight.w900,
               letterSpacing: -1),
           colors: AppPalette.heroGrad,
           textAlign: TextAlign.center,
@@ -165,7 +115,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           subtitle: 'שהופכות לנקודות אמיתיות',
           tint: AppPalette.green,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         _StaggeredFeature(
           controller: _enterController,
           delay: 0.32,
@@ -174,7 +124,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           subtitle: 'המרת נקודות לכסף שאפשר להשתמש בו',
           tint: AppPalette.gold,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         _StaggeredFeature(
           controller: _enterController,
           delay: 0.44,
@@ -191,7 +141,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         child: ScaleTap(
           onTap: () => context.pushFadeUp((_) => const SignupScreen()),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 18),
+            padding: const EdgeInsets.symmetric(vertical: 13),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               gradient: const LinearGradient(
@@ -270,44 +220,6 @@ class _Reveal extends StatelessWidget {
   }
 }
 
-class _FloatingLogo extends StatelessWidget {
-  const _FloatingLogo({required this.controller});
-  final AnimationController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        final t = Curves.easeInOut.transform(controller.value);
-        final dy = -6 + (-6 * t);
-        return Transform.translate(
-          offset: Offset(0, dy),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppPalette.gold.withValues(alpha: 0.28),
-                      AppPalette.gold.withValues(alpha: 0),
-                    ],
-                  ),
-                ),
-              ),
-              const Task2PlayLogo(size: 140),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
 class _StaggeredFeature extends StatelessWidget {
   const _StaggeredFeature({
     required this.controller,
@@ -332,26 +244,26 @@ class _StaggeredFeature extends StatelessWidget {
       interval: Interval(delay, (delay + 0.5).clamp(0.0, 1.0),
           curve: Curves.easeOutCubic),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 38,
+              height: 38,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: tint.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(11),
                 border: Border.all(color: tint.withValues(alpha: 0.4)),
               ),
-              child: Text(icon, style: const TextStyle(fontSize: 24)),
+              child: Text(icon, style: const TextStyle(fontSize: 20)),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 11),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
