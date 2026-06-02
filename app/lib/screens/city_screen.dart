@@ -1005,7 +1005,7 @@ class _CityScreenState extends State<CityScreen>
         // little closer to the left edge (clear of the centred island).
         Positioned(
           left: 6,
-          bottom: _trayOpen ? 132 : 18,
+          bottom: _trayOpen ? 132 : 8,
           child: AnimatedSlide(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOutBack,
@@ -1616,11 +1616,11 @@ class _BuildButton extends StatelessWidget {
           children: [
             Icon(active ? Icons.close_rounded : Icons.handyman_rounded,
                 color: Colors.white, size: 28),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(active ? 'ביטול' : 'בנייה',
-                style: displayFont(
-                    size: 12,
-                    weight: FontWeight.w900,
+                style: bodyFont(
+                    size: 10,
+                    weight: FontWeight.w700,
                     color: Colors.white,
                     height: 1.0)),
           ],
