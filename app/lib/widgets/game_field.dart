@@ -17,6 +17,7 @@ class GameField extends StatelessWidget {
     this.maxLength,
     this.validator,
     this.suffix,
+    this.light = false,
   });
 
   final TextEditingController controller;
@@ -29,8 +30,20 @@ class GameField extends StatelessWidget {
   final String? Function(String?)? validator;
   final Widget? suffix;
 
+  /// Light styling for use on a white card (city theme): light fill, dark ink,
+  /// violet focus. Defaults to the dark style used elsewhere in the app.
+  final bool light;
+
+  static const _lightInk = Color(0xFF2A2D43);
+  static const _lightFill = Color(0xFFF2F3F8);
+  static const _lightBorder = Color(0xFFE2E4EE);
+  static const _violet = Color(0xFF7B2CBF);
+
   @override
   Widget build(BuildContext context) {
+    final fill = light ? _lightFill : Colors.white.withValues(alpha: 0.06);
+    final idle = light ? _lightBorder : Colors.white.withValues(alpha: 0.08);
+    final focusColor = light ? _violet : AppPalette.gold;
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
@@ -39,23 +52,25 @@ class GameField extends StatelessWidget {
       maxLines: obscureText ? 1 : maxLines,
       maxLength: maxLength,
       validator: validator,
-      style: bodyFont(size: 16),
-      cursorColor: AppPalette.gold,
+      style: bodyFont(size: 16, color: light ? _lightInk : Colors.white),
+      cursorColor: focusColor,
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: bodyFont(
           size: 15,
-          color: Colors.white.withValues(alpha: 0.32),
+          color: light
+              ? _lightInk.withValues(alpha: 0.38)
+              : Colors.white.withValues(alpha: 0.32),
         ),
         suffixIcon: suffix,
         counterText: '',
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.06),
+        fillColor: fill,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: _border(Colors.white.withValues(alpha: 0.08)),
-        enabledBorder: _border(Colors.white.withValues(alpha: 0.08)),
-        focusedBorder: _border(AppPalette.gold, width: 1.6),
+        border: _border(idle),
+        enabledBorder: _border(idle),
+        focusedBorder: _border(focusColor, width: 1.6),
         errorBorder: _border(AppPalette.pink),
         focusedErrorBorder: _border(AppPalette.pink, width: 1.6),
         errorStyle: bodyFont(size: 12, color: AppPalette.pink),
@@ -72,8 +87,9 @@ class GameField extends StatelessWidget {
 
 /// Tiny label rendered above a field. Use to keep label typography consistent.
 class FieldLabel extends StatelessWidget {
-  const FieldLabel(this.text, {super.key});
+  const FieldLabel(this.text, {super.key, this.light = false});
   final String text;
+  final bool light;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +99,9 @@ class FieldLabel extends StatelessWidget {
         text,
         style: bodyFont(
           size: 13,
-          color: Colors.white.withValues(alpha: 0.85),
+          color: light
+              ? const Color(0xFF5A3B86)
+              : Colors.white.withValues(alpha: 0.85),
           weight: FontWeight.w700,
           letterSpacing: 0.3,
         ),
@@ -158,23 +176,27 @@ class PrimaryButton extends StatelessWidget {
 
 /// Inline error banner for form-level errors.
 class ErrorBanner extends StatelessWidget {
-  const ErrorBanner({super.key, required this.message});
+  const ErrorBanner({super.key, required this.message, this.light = false});
   final String message;
+  final bool light;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppPalette.pink.withValues(alpha: 0.18),
+        color: AppPalette.pink.withValues(alpha: light ? 0.12 : 0.18),
         borderRadius: BorderRadius.circular(14),
         border:
-            Border.all(color: AppPalette.pink.withValues(alpha: 0.4)),
+            Border.all(color: AppPalette.pink.withValues(alpha: light ? 0.4 : 0.4)),
       ),
       child: Text(
         message,
         textAlign: TextAlign.right,
-        style: bodyFont(color: Colors.white, weight: FontWeight.w600),
+        style: bodyFont(
+          color: light ? const Color(0xFFB5246B) : Colors.white,
+          weight: FontWeight.w600,
+        ),
       ),
     );
   }

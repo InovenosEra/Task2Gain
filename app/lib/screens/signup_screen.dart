@@ -2,13 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
-import '../theme/app_theme.dart';
 import '../widgets/avatar_picker.dart';
+import '../widgets/city_sky.dart';
 import '../widgets/game_field.dart';
-import '../widgets/gradient_text.dart';
 import '../widgets/page_routes.dart';
-import '../widgets/screen_background.dart';
-import '../widgets/task2play_logo.dart';
 import 'main_navigation.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -89,133 +86,160 @@ class _SignupScreenState extends State<SignupScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppPalette.bgDeep,
-        body: ScreenBackground(
+        backgroundColor: CitySky.skyTop,
+        body: CitySkyBackground(
           child: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(Icons.arrow_forward,
-                            color: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 130,
-                            height: 130,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: RadialGradient(colors: [
-                                AppPalette.gold.withValues(alpha: 0.3),
-                                AppPalette.gold.withValues(alpha: 0),
-                              ]),
+            child: Stack(
+              children: [
+                LayoutBuilder(
+                  builder: (context, c) => SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: c.maxHeight - 16),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 700),
+                          child: CityCard(
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'יוצרים משפחה חדשה',
+                                    textAlign: TextAlign.center,
+                                    style: cityFont(
+                                        size: 23, weight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'הורה אחד נרשם, אחר כך מזמינים את כולם',
+                                    textAlign: TextAlign.center,
+                                    style: cityFont(
+                                        size: 12.5,
+                                        weight: FontWeight.w500,
+                                        color: CitySky.inkSoft),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  AvatarPicker(
+                                    light: true,
+                                    bubbleSize: 46,
+                                    selected: _avatar,
+                                    onSelect: (v) =>
+                                        setState(() => _avatar = v),
+                                    options: adultAvatars,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            const FieldLabel('השם שלך',
+                                                light: true),
+                                            GameField(
+                                              light: true,
+                                              controller: _parentNameController,
+                                              hint: 'למשל: אמא של דניאל',
+                                              validator: (v) => (v == null ||
+                                                      v.trim().isEmpty)
+                                                  ? 'חובה'
+                                                  : null,
+                                            ),
+                                            const SizedBox(height: 10),
+                                            const FieldLabel('שם המשפחה',
+                                                light: true),
+                                            GameField(
+                                              light: true,
+                                              controller: _familyNameController,
+                                              hint: 'למשל: משפחת לאופר',
+                                              validator: (v) => (v == null ||
+                                                      v.trim().isEmpty)
+                                                  ? 'חובה'
+                                                  : null,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 18),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            const FieldLabel('אימייל',
+                                                light: true),
+                                            GameField(
+                                              light: true,
+                                              controller: _emailController,
+                                              hint: 'parent@example.com',
+                                              keyboardType:
+                                                  TextInputType.emailAddress,
+                                              textDirection: TextDirection.ltr,
+                                              validator: _validateEmail,
+                                            ),
+                                            const SizedBox(height: 10),
+                                            const FieldLabel('סיסמה',
+                                                light: true),
+                                            GameField(
+                                              light: true,
+                                              controller: _passwordController,
+                                              hint: 'לפחות 6 תווים',
+                                              obscureText: _passwordHidden,
+                                              textDirection: TextDirection.ltr,
+                                              validator: (v) => (v == null ||
+                                                      v.length < 6)
+                                                  ? 'לפחות 6 תווים'
+                                                  : null,
+                                              suffix: IconButton(
+                                                onPressed: () => setState(() =>
+                                                    _passwordHidden =
+                                                        !_passwordHidden),
+                                                icon: Icon(
+                                                  _passwordHidden
+                                                      ? Icons.visibility
+                                                      : Icons.visibility_off,
+                                                  color: CitySky.inkSoft,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (_error != null) ...[
+                                    const SizedBox(height: 12),
+                                    ErrorBanner(message: _error!, light: true),
+                                  ],
+                                  const SizedBox(height: 14),
+                                  CityButton(
+                                    label: 'יוצרים את המשפחה',
+                                    onTap: _submit,
+                                    loading: _submitting,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          const Task2PlayLogo(size: 88),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    GradientText(
-                      'יוצרים משפחה חדשה',
-                      style: displayFont(
-                        size: 26,
-                        weight: FontWeight.w900,
-                      ),
-                      colors: AppPalette.heroGrad,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'הורה אחד נרשם, אחר כך מזמינים את כולם',
-                      textAlign: TextAlign.center,
-                      style: bodyFont(size: 13, color: Colors.white60),
-                    ),
-                    const SizedBox(height: 24),
-                    const FieldLabel('האווטר שלך'),
-                    AvatarPicker(
-                      selected: _avatar,
-                      onSelect: (v) => setState(() => _avatar = v),
-                      options: adultAvatars,
-                    ),
-                    const SizedBox(height: 18),
-                    const FieldLabel('השם שלך'),
-                    GameField(
-                      controller: _parentNameController,
-                      hint: 'למשל: אמא של דניאל',
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'חובה' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    const FieldLabel('שם המשפחה'),
-                    GameField(
-                      controller: _familyNameController,
-                      hint: 'למשל: משפחת לאופר',
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'חובה' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    const FieldLabel('אימייל'),
-                    GameField(
-                      controller: _emailController,
-                      hint: 'parent@example.com',
-                      keyboardType: TextInputType.emailAddress,
-                      textDirection: TextDirection.ltr,
-                      validator: _validateEmail,
-                    ),
-                    const SizedBox(height: 14),
-                    const FieldLabel('סיסמה'),
-                    GameField(
-                      controller: _passwordController,
-                      hint: 'לפחות 6 תווים',
-                      obscureText: _passwordHidden,
-                      textDirection: TextDirection.ltr,
-                      validator: (v) =>
-                          (v == null || v.length < 6) ? 'לפחות 6 תווים' : null,
-                      suffix: IconButton(
-                        onPressed: () => setState(
-                            () => _passwordHidden = !_passwordHidden),
-                        icon: Icon(
-                          _passwordHidden
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: Colors.white54,
                         ),
                       ),
                     ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 14),
-                      ErrorBanner(message: _error!),
-                    ],
-                    const SizedBox(height: 24),
-                    PrimaryButton(
-                      label: 'יוצרים את המשפחה',
-                      onTap: _submit,
-                      loading: _submitting,
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                  ),
                 ),
-              ),
+                Positioned(
+                  top: 0,
+                  right: 4,
+                  child: CityBackButton(
+                    onTap: () => Navigator.of(context).maybePop(),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),

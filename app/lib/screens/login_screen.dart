@@ -2,11 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
-import '../theme/app_theme.dart';
+import '../widgets/city_sky.dart';
 import '../widgets/game_field.dart';
-import '../widgets/gradient_text.dart';
 import '../widgets/page_routes.dart';
-import '../widgets/screen_background.dart';
 import 'main_navigation.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -81,90 +79,94 @@ class _LoginScreenState extends State<LoginScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppPalette.bgDeep,
-        body: ScreenBackground(
+        backgroundColor: CitySky.skyTop,
+        body: CitySkyBackground(
           child: SafeArea(
             child: Stack(
               children: [
-                // Centred on screen; only scrolls if the keyboard squeezes it.
                 LayoutBuilder(
                   builder: (context, c) => SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
                     child: ConstrainedBox(
-                      constraints:
-                          BoxConstraints(minHeight: c.maxHeight - 16),
+                      constraints: BoxConstraints(minHeight: c.maxHeight - 16),
                       child: Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 460),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                GradientText(
-                                  'ברוך שובך',
-                                  style: displayFont(
-                                      size: 24, weight: FontWeight.w900),
-                                  colors: AppPalette.heroGrad,
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'מתחברים לחשבון הקיים',
-                                  textAlign: TextAlign.center,
-                                  style: bodyFont(
-                                      size: 13, color: Colors.white60),
-                                ),
-                                const SizedBox(height: 18),
-                                const FieldLabel('אימייל'),
-                                GameField(
-                                  controller: _emailController,
-                                  hint: 'parent@example.com',
-                                  keyboardType: TextInputType.emailAddress,
-                                  textDirection: TextDirection.ltr,
-                                  validator: (v) {
-                                    if (v == null || v.trim().isEmpty) {
-                                      return 'חובה';
-                                    }
-                                    final ok = RegExp(
-                                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                                        .hasMatch(v.trim());
-                                    return ok ? null : 'אימייל לא תקין';
-                                  },
-                                ),
-                                const SizedBox(height: 12),
-                                const FieldLabel('סיסמה'),
-                                GameField(
-                                  controller: _passwordController,
-                                  hint: 'הסיסמה שלך',
-                                  textDirection: TextDirection.ltr,
-                                  obscureText: _passwordHidden,
-                                  validator: (v) =>
-                                      (v == null || v.isEmpty) ? 'חובה' : null,
-                                  suffix: IconButton(
-                                    onPressed: () => setState(() =>
-                                        _passwordHidden = !_passwordHidden),
-                                    icon: Icon(
-                                      _passwordHidden
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                      color: Colors.white54,
+                          constraints: const BoxConstraints(maxWidth: 430),
+                          child: CityCard(
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    'ברוך שובך',
+                                    textAlign: TextAlign.center,
+                                    style: cityFont(
+                                        size: 23, weight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'מתחברים לחשבון הקיים',
+                                    textAlign: TextAlign.center,
+                                    style: cityFont(
+                                        size: 12.5,
+                                        weight: FontWeight.w500,
+                                        color: CitySky.inkSoft),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const FieldLabel('אימייל', light: true),
+                                  GameField(
+                                    light: true,
+                                    controller: _emailController,
+                                    hint: 'parent@example.com',
+                                    keyboardType: TextInputType.emailAddress,
+                                    textDirection: TextDirection.ltr,
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) {
+                                        return 'חובה';
+                                      }
+                                      final ok = RegExp(
+                                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                                          .hasMatch(v.trim());
+                                      return ok ? null : 'אימייל לא תקין';
+                                    },
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const FieldLabel('סיסמה', light: true),
+                                  GameField(
+                                    light: true,
+                                    controller: _passwordController,
+                                    hint: 'הסיסמה שלך',
+                                    textDirection: TextDirection.ltr,
+                                    obscureText: _passwordHidden,
+                                    validator: (v) => (v == null || v.isEmpty)
+                                        ? 'חובה'
+                                        : null,
+                                    suffix: IconButton(
+                                      onPressed: () => setState(() =>
+                                          _passwordHidden = !_passwordHidden),
+                                      icon: Icon(
+                                        _passwordHidden
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
+                                        color: CitySky.inkSoft,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                if (_error != null) ...[
-                                  const SizedBox(height: 12),
-                                  ErrorBanner(message: _error!),
+                                  if (_error != null) ...[
+                                    const SizedBox(height: 12),
+                                    ErrorBanner(message: _error!, light: true),
+                                  ],
+                                  const SizedBox(height: 18),
+                                  CityButton(
+                                    label: 'התחבר',
+                                    onTap: _submit,
+                                    loading: _submitting,
+                                  ),
                                 ],
-                                const SizedBox(height: 18),
-                                PrimaryButton(
-                                  label: 'התחבר',
-                                  onTap: _submit,
-                                  loading: _submitting,
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
@@ -175,9 +177,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 Positioned(
                   top: 0,
                   right: 4,
-                  child: IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_forward, color: Colors.white),
+                  child: CityBackButton(
+                    onTap: () => Navigator.of(context).maybePop(),
                   ),
                 ),
               ],

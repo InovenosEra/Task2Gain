@@ -2,12 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
-import '../theme/app_theme.dart';
 import '../widgets/avatar_picker.dart';
+import '../widgets/city_sky.dart';
 import '../widgets/game_field.dart';
-import '../widgets/gradient_text.dart';
 import '../widgets/page_routes.dart';
-import '../widgets/screen_background.dart';
 import 'main_navigation.dart';
 
 class JoinWithCodeScreen extends StatefulWidget {
@@ -88,8 +86,8 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppPalette.bgDeep,
-        body: ScreenBackground(
+        backgroundColor: CitySky.skyTop,
+        body: CitySkyBackground(
           child: SafeArea(
             child: Stack(
               children: [
@@ -98,36 +96,37 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
                 LayoutBuilder(
                   builder: (context, c) => SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
                     child: ConstrainedBox(
                       constraints:
                           BoxConstraints(minHeight: c.maxHeight - 16),
                       child: Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 720),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                GradientText(
-                                  'מצטרפים למשפחה',
-                                  style: displayFont(
-                                      size: 24, weight: FontWeight.w900),
-                                  colors: AppPalette.heroGrad,
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(child: _leftColumn()),
-                                    const SizedBox(width: 20),
-                                    Expanded(child: _rightColumn()),
-                                  ],
-                                ),
-                              ],
+                          constraints: const BoxConstraints(maxWidth: 700),
+                          child: CityCard(
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'מצטרפים למשפחה',
+                                    textAlign: TextAlign.center,
+                                    style: cityFont(
+                                        size: 23, weight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(child: _leftColumn()),
+                                      const SizedBox(width: 18),
+                                      Expanded(child: _rightColumn()),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -138,9 +137,8 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
                 Positioned(
                   top: 0,
                   right: 4,
-                  child: IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_forward, color: Colors.white),
+                  child: CityBackButton(
+                    onTap: () => Navigator.of(context).maybePop(),
                   ),
                 ),
               ],
@@ -154,15 +152,19 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
   Widget _leftColumn() => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const FieldLabel('האווטר שלך'),
+          const FieldLabel('האווטר שלך', light: true),
+          const SizedBox(height: 2),
           AvatarPicker(
+            light: true,
+            bubbleSize: 42,
             selected: _avatar,
             onSelect: (v) => setState(() => _avatar = v),
             options: kidAvatars,
           ),
-          const SizedBox(height: 12),
-          const FieldLabel('קוד ההזמנה'),
+          const SizedBox(height: 10),
+          const FieldLabel('קוד ההזמנה', light: true),
           GameField(
+            light: true,
             controller: _codeController,
             hint: '6 ספרות',
             keyboardType: TextInputType.number,
@@ -175,22 +177,24 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
               return null;
             },
           ),
-          const SizedBox(height: 10),
-          const FieldLabel('השם שלך'),
-          GameField(
-            controller: _nameController,
-            hint: 'למשל: דניאל',
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'חובה' : null,
-          ),
         ],
       );
 
   Widget _rightColumn() => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const FieldLabel('אימייל'),
+          const FieldLabel('השם שלך', light: true),
           GameField(
+            light: true,
+            controller: _nameController,
+            hint: 'למשל: דניאל',
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'חובה' : null,
+          ),
+          const SizedBox(height: 8),
+          const FieldLabel('אימייל', light: true),
+          GameField(
+            light: true,
             controller: _emailController,
             hint: 'kid@example.com',
             keyboardType: TextInputType.emailAddress,
@@ -202,9 +206,10 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
               return ok ? null : 'אימייל לא תקין';
             },
           ),
-          const SizedBox(height: 10),
-          const FieldLabel('סיסמה'),
+          const SizedBox(height: 8),
+          const FieldLabel('סיסמה', light: true),
           GameField(
+            light: true,
             controller: _passwordController,
             hint: 'לפחות 6 תווים',
             textDirection: TextDirection.ltr,
@@ -216,16 +221,16 @@ class _JoinWithCodeScreenState extends State<JoinWithCodeScreen> {
                   setState(() => _passwordHidden = !_passwordHidden),
               icon: Icon(
                 _passwordHidden ? Icons.visibility : Icons.visibility_off,
-                color: Colors.white54,
+                color: CitySky.inkSoft,
               ),
             ),
           ),
           if (_error != null) ...[
-            const SizedBox(height: 12),
-            ErrorBanner(message: _error!),
+            const SizedBox(height: 10),
+            ErrorBanner(message: _error!, light: true),
           ],
-          const SizedBox(height: 14),
-          PrimaryButton(
+          const SizedBox(height: 12),
+          CityButton(
             label: 'מצטרף!',
             onTap: _submit,
             loading: _submitting,

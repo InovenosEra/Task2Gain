@@ -12,14 +12,21 @@ class AvatarPicker extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     this.options = kidAvatars,
+    this.light = false,
+    this.bubbleSize = 56,
   });
 
   final String selected;
   final void Function(String) onSelect;
   final List<String> options;
 
+  /// Light styling for use on a white card (city theme).
+  final bool light;
+  final double bubbleSize;
+
   @override
   Widget build(BuildContext context) {
+    final goldDeep = const Color(0xFFFFA94D);
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -30,22 +37,26 @@ class AvatarPicker extends StatelessWidget {
           onTap: () => onSelect(emoji),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            width: 56,
-            height: 56,
+            width: bubbleSize,
+            height: bubbleSize,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: isSelected
-                  ? _gold.withValues(alpha: 0.25)
-                  : Colors.white.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(28),
+                  ? _gold.withValues(alpha: light ? 0.32 : 0.25)
+                  : (light
+                      ? const Color(0xFFF2F3F8)
+                      : Colors.white.withValues(alpha: 0.06)),
+              borderRadius: BorderRadius.circular(bubbleSize / 2),
               border: Border.all(
                 color: isSelected
-                    ? _gold
-                    : Colors.white.withValues(alpha: 0.1),
+                    ? (light ? goldDeep : _gold)
+                    : (light
+                        ? const Color(0xFFE2E4EE)
+                        : Colors.white.withValues(alpha: 0.1)),
                 width: isSelected ? 2 : 1,
               ),
             ),
-            child: Text(emoji, style: const TextStyle(fontSize: 30)),
+            child: Text(emoji, style: TextStyle(fontSize: bubbleSize * 0.54)),
           ),
         );
       }).toList(),
