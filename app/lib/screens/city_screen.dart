@@ -1587,43 +1587,44 @@ class _BuildButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Icon + label live inside the gold box, matching the tasks/shop/family
+    // rail chips.
     return ScaleTap(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppPalette.gold, AppPalette.goldDeep],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: AppPalette.goldDeep.withValues(alpha: 0.5),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-              border: active
-                  ? Border.all(color: Colors.white, width: 2.5)
-                  : null,
-            ),
-            child: Icon(active ? Icons.close_rounded : Icons.handyman_rounded,
-                color: Colors.white, size: 32),
+      child: Container(
+        width: 64,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppPalette.gold, AppPalette.goldDeep],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          const SizedBox(height: 4),
-          Text(active ? 'ביטול' : 'בנייה',
-              style: displayFont(
-                  size: 12,
-                  weight: FontWeight.w900,
-                  color: Colors.white,
-                  height: 1.0)),
-        ],
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: AppPalette.goldDeep.withValues(alpha: 0.5),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+          border:
+              active ? Border.all(color: Colors.white, width: 2.5) : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(active ? Icons.close_rounded : Icons.handyman_rounded,
+                color: Colors.white, size: 28),
+            const SizedBox(height: 3),
+            Text(active ? 'ביטול' : 'בנייה',
+                style: displayFont(
+                    size: 12,
+                    weight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.0)),
+          ],
+        ),
       ),
     );
   }
