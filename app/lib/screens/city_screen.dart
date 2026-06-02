@@ -927,9 +927,10 @@ class _CityScreenState extends State<CityScreen>
             ),
           ),
 
-        // Top-left: settings + currency chips.
+        // Top-left: settings + currency chips. Top inset matches the city
+        // card (18) so both clusters start on the same horizontal line.
         Positioned(
-          top: 8,
+          top: 18,
           left: 12,
           child: _TopLeftBar(
             uid: widget.data.uid,
