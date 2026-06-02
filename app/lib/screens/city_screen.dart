@@ -1152,8 +1152,8 @@ class _GearButton extends StatelessWidget {
       child: ScaleTap(
         onTap: onTap,
         child: Container(
-          width: 44,
-          height: 44,
+          width: 38,
+          height: 38,
           decoration: const BoxDecoration(
             color: _Chrome.card,
             shape: BoxShape.circle,
@@ -1165,7 +1165,7 @@ class _GearButton extends StatelessWidget {
             ],
           ),
           child: const Icon(Icons.settings_rounded,
-              color: _Chrome.inkSoft, size: 24),
+              color: _Chrome.inkSoft, size: 21),
         ),
       ),
     );
@@ -1231,11 +1231,11 @@ class _CurrencyChipState extends State<_CurrencyChip>
     // RTL row: first child renders on the right. We want the "+" on the left
     // and the coloured icon badge on the right, number/label between.
     return Container(
-      height: 44,
+      height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         color: _Chrome.card,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(19),
         boxShadow: const [
           BoxShadow(
               color: Color(0x33000000), blurRadius: 10, offset: Offset(0, 4)),
@@ -1263,12 +1263,14 @@ class _CurrencyChipState extends State<_CurrencyChip>
                   builder: (_, v, _) => Text(
                     formatCount(v.round()),
                     style: displayFont(
-                        size: 17, weight: FontWeight.w900, color: _Chrome.ink),
+                        size: 15, weight: FontWeight.w900, color: _Chrome.ink,
+                        height: 1.0),
                   ),
                 ),
+                const SizedBox(height: 1),
                 Text(label,
                     style: bodyFont(
-                        size: 9, color: _Chrome.inkSoft, height: 1.0)),
+                        size: 8.5, color: _Chrome.inkSoft, height: 1.0)),
               ],
             ),
           ),
@@ -1276,11 +1278,11 @@ class _CurrencyChipState extends State<_CurrencyChip>
           ScaleTransition(
             scale: _scale,
             child: Container(
-              width: 30,
-              height: 30,
+              width: 26,
+              height: 26,
               decoration:
                   BoxDecoration(color: iconColor, shape: BoxShape.circle),
-              child: Icon(icon, color: Colors.white, size: 19),
+              child: Icon(icon, color: Colors.white, size: 16),
             ),
           ),
         ],
@@ -1300,17 +1302,17 @@ class _PlusButton extends StatelessWidget {
       child: ScaleTap(
       onTap: onTap,
       child: Container(
-        width: 26,
-        height: 26,
+        width: 24,
+        height: 24,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [AppPalette.green, AppPalette.sky],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 19),
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 17),
       ),
       ),
     );
