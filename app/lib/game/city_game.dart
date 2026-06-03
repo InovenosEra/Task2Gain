@@ -590,13 +590,7 @@ class CityGame extends FlameGame with TapCallbacks {
     final w = tileW * 1.9 * levelScale;
     final size = Vector2(w, w); // square assets
     // Soft contact shadow under the sprite.
-    canvas.drawOval(
-      Rect.fromCenter(
-          center: Offset(contact.dx, contact.dy + 2),
-          width: tileW * 0.7,
-          height: tileH * 0.6),
-      Paint()..color = const Color(0x33000000),
-    );
+    _softShadow(canvas, contact, tileW * 0.72, tileH * 0.62);
     // Seat the base slightly below the tile centre so it sits on the ground.
     sprite.render(
       canvas,
@@ -1047,6 +1041,8 @@ class CityGame extends FlameGame with TapCallbacks {
   }
 
   void _tree(Canvas canvas, Offset baseTop, double s) {
+    _softShadow(canvas, baseTop, tileW * 0.36 * s, tileH * 0.38 * s,
+        alpha: 0x26, blur: 3);
     // trunk
     canvas.drawRect(
       Rect.fromCenter(
@@ -1106,13 +1102,8 @@ class CityGame extends FlameGame with TapCallbacks {
     final c = _iso(gx + 0.5, gy + 0.5);
     switch (kind) {
       case _SceneryKind.bush:
-        canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(c.dx, c.dy + 2),
-              width: tileW * 0.3,
-              height: tileH * 0.35),
-          Paint()..color = const Color(0x22000000),
-        );
+        _softShadow(canvas, c, tileW * 0.34, tileH * 0.38, alpha: 0x26,
+            blur: 3);
         canvas.drawCircle(Offset(c.dx - 4, c.dy - 4), 7,
             Paint()..color = const Color(0xFF4FB477));
         canvas.drawCircle(Offset(c.dx + 5, c.dy - 2), 6,
@@ -1120,6 +1111,8 @@ class CityGame extends FlameGame with TapCallbacks {
         canvas.drawCircle(Offset(c.dx, c.dy - 8), 6,
             Paint()..color = const Color(0xFF6FCB90));
       case _SceneryKind.flowers:
+        _softShadow(canvas, c, tileW * 0.26, tileH * 0.3, alpha: 0x1C,
+            blur: 3);
         const petals = [
           Color(0xFFEF476F),
           Color(0xFFFFD166),
@@ -1133,6 +1126,8 @@ class CityGame extends FlameGame with TapCallbacks {
               Offset(c.dx + dx, c.dy + dy), 3, Paint()..color = petals[i]);
         }
       case _SceneryKind.rock:
+        _softShadow(canvas, c, tileW * 0.32, tileH * 0.34, alpha: 0x26,
+            blur: 3);
         canvas.drawOval(
           Rect.fromCenter(
               center: Offset(c.dx, c.dy), width: 16, height: 11),
@@ -1153,12 +1148,8 @@ class CityGame extends FlameGame with TapCallbacks {
         ];
         final h = ((gx * 12345) ^ (gy * 6789)) & 0x7fffffff;
         final shirt = shirts[h % shirts.length];
-        // shadow
-        canvas.drawOval(
-          Rect.fromCenter(
-              center: Offset(c.dx, c.dy + 2), width: 10, height: 4),
-          Paint()..color = const Color(0x22000000),
-        );
+        _softShadow(canvas, c, tileW * 0.24, tileH * 0.26, alpha: 0x26,
+            blur: 2.5);
         // body (rounded) + head
         canvas.drawRRect(
           RRect.fromRectAndRadius(
@@ -1205,10 +1196,32 @@ class CityGame extends FlameGame with TapCallbacks {
         Paint()..color = const Color(0xFFEAF6FF));
   }
 
+  // --- Stage 1: unified soft contact shadow ---------------------------------
+  // A single grounding shadow style for every object: a blurred dark ellipse
+  // nudged away from the light (light upper-left → shadow falls lower-right).
+
+  /// Soft contact shadow centred on a screen [center], sized [w]×[h].
+  void _softShadow(Canvas canvas, Offset center, double w, double h,
+      {int alpha = 0x33, double blur = 4}) {
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(center.dx + tileW * 0.05, center.dy + tileH * 0.10),
+        width: w,
+        height: h,
+      ),
+      Paint()
+        ..color = Color(alpha << 24)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur),
+    );
+  }
+
+  /// Footprint contact shadow for a tile-aligned object (towers, parks, …).
   void _contactShadow(Canvas canvas, num x0, num y0, num x1, num y1,
       {int alpha = 0x33}) {
-    canvas.drawPath(_tilePath(x0.toDouble(), y0.toDouble(), x1.toDouble(),
-        y1.toDouble()), Paint()..color = Color(alpha << 24));
+    final center = _iso((x0 + x1) / 2, (y0 + y1) / 2);
+    final span = ((x1 - x0) + (y1 - y0)).toDouble();
+    _softShadow(canvas, center, span * tileW * 0.46, span * tileH * 0.46,
+        alpha: alpha);
   }
 
   Path _tilePath(double x0, double y0, double x1, double y1) => Path()
