@@ -514,16 +514,31 @@ class CityGame extends FlameGame with TapCallbacks {
           ..lineTo(_iso(x + 1, y + 1).dx, _iso(x + 1, y + 1).dy)
           ..lineTo(_iso(x, y + 1).dx, _iso(x, y + 1).dy)
           ..close();
-        final base = (x + y).isEven
-            ? const Color(0xFF8FD06A)
-            : const Color(0xFF82C75E);
+        // Per-tile grass: two-tone checker + deterministic brightness/hue
+        // jitter so the lawn isn't a flat uniform fill (Stage 3).
+        final even = (x + y).isEven;
+        final j = _jitter(x, y); // 0.93..1.07 brightness
+        final hueN =
+            (((x * 73856093) ^ (y * 19349663)) & 0xff) / 255.0 - 0.5; // ±.5
+        final r0 = even ? 0x8F : 0x82;
+        final g0 = even ? 0xD0 : 0xC7;
+        final b0 = even ? 0x6A : 0x5E;
+        int ch(int v, double extra) => (v * j + extra).clamp(0, 255).round();
+        final base = Color.fromARGB(
+            255, ch(r0, hueN * 14), ch(g0, hueN * 6), ch(b0, -hueN * 10));
         canvas.drawPath(path, Paint()..color = base);
+
+        // Grid is a placement affordance: bold/gold in build mode, a soft
+        // whisper otherwise so it doesn't flatten the lawn (Stage 3).
         canvas.drawPath(
           path,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 1
-            ..color = const Color(0x2233691E),
+            ..strokeWidth = _buildMode ? 1.3 : 0.7
+            ..color = (_buildMode
+                    ? const Color(0xFFFFA94D)
+                    : const Color(0xFF2E5A18))
+                .withValues(alpha: _buildMode ? 0.5 : 0.08),
         );
         // Board-edge ambient occlusion: darken the outer ring of tiles so the
         // ground reads as recessed into the island rim (Stage 2).
