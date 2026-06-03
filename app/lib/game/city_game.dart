@@ -525,6 +525,15 @@ class CityGame extends FlameGame with TapCallbacks {
             ..strokeWidth = 1
             ..color = const Color(0x2233691E),
         );
+        // Board-edge ambient occlusion: darken the outer ring of tiles so the
+        // ground reads as recessed into the island rim (Stage 2).
+        final edgeDist =
+            [x, y, gridSize - 1 - x, gridSize - 1 - y].reduce(min);
+        if (edgeDist < 2) {
+          final aoT = (1 - edgeDist / 2).clamp(0.0, 1.0) * 0.16;
+          canvas.drawPath(
+              path, Paint()..color = const Color(0xFF12380C).withValues(alpha: aoT));
+        }
       }
     }
   }
@@ -1200,9 +1209,12 @@ class CityGame extends FlameGame with TapCallbacks {
   // A single grounding shadow style for every object: a blurred dark ellipse
   // nudged away from the light (light upper-left → shadow falls lower-right).
 
-  /// Soft contact shadow centred on a screen [center], sized [w]×[h].
+  /// Soft contact shadow centred on a screen [center], sized [w]×[h]. Draws a
+  /// blurred cast shadow nudged away from the light, plus a tighter, darker
+  /// ambient-occlusion core right where the object meets the ground (Stage 2).
   void _softShadow(Canvas canvas, Offset center, double w, double h,
       {int alpha = 0x33, double blur = 4}) {
+    // Cast shadow, offset toward lower-right.
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(center.dx + tileW * 0.05, center.dy + tileH * 0.10),
@@ -1212,6 +1224,18 @@ class CityGame extends FlameGame with TapCallbacks {
       Paint()
         ..color = Color(alpha << 24)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur),
+    );
+    // AO core: tighter, darker, centred under the object.
+    final coreA = (alpha + 0x22).clamp(0, 0xff);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(center.dx, center.dy + tileH * 0.02),
+        width: w * 0.58,
+        height: h * 0.58,
+      ),
+      Paint()
+        ..color = Color(coreA << 24)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.6),
     );
   }
 
