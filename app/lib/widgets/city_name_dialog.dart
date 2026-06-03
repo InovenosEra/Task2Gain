@@ -54,6 +54,8 @@ class _CityNameDialogState extends State<CityNameDialog> {
         content: TextField(
           controller: _controller,
           autofocus: true,
+          autocorrect: false,
+          enableSuggestions: false,
           maxLength: 24,
           textAlign: TextAlign.right,
           style: bodyFont(size: 16),

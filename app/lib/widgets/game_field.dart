@@ -48,6 +48,8 @@ class GameField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       textDirection: textDirection,
+      autocorrect: false,
+      enableSuggestions: false,
       obscureText: obscureText,
       maxLines: obscureText ? 1 : maxLines,
       maxLength: maxLength,

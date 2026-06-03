@@ -124,6 +124,8 @@ class _ConvertPointsScreenState extends State<ConvertPointsScreen> {
               controller: _controller,
               keyboardType: TextInputType.number,
               textDirection: TextDirection.ltr,
+              autocorrect: false,
+              enableSuggestions: false,
               textAlign: TextAlign.center,
               style: monoFont(size: 38, color: Colors.white),
               cursorColor: AppPalette.gold,

@@ -444,6 +444,8 @@ class _AddRewardSheetState extends State<_AddRewardSheet> {
       controller: controller,
       keyboardType: keyboardType,
       textDirection: textDirection,
+      autocorrect: false,
+      enableSuggestions: false,
       validator: validator,
       style: bodyFont(size: 15),
       cursorColor: AppPalette.gold,

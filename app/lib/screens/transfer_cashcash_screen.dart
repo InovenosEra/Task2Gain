@@ -143,6 +143,8 @@ class _TransferCashCashScreenState extends State<TransferCashCashScreen> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               textDirection: TextDirection.ltr,
+              autocorrect: false,
+              enableSuggestions: false,
               textAlign: TextAlign.center,
               style: monoFont(size: 36, color: Colors.white),
               cursorColor: AppPalette.gold,
