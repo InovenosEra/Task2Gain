@@ -396,9 +396,19 @@ class _CityScreenState extends State<CityScreen>
                     IconButton(
                       icon: const Icon(Icons.edit_rounded,
                           color: AppPalette.gold),
+                      tooltip: 'שנה שם',
                       onPressed: () {
                         Navigator.of(ctx).pop();
                         _renameCity();
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.settings_rounded,
+                          color: AppPalette.gold),
+                      tooltip: 'הגדרות',
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _openSettings();
                       },
                     ),
                   ],
@@ -912,15 +922,14 @@ class _CityScreenState extends State<CityScreen>
             ),
           ),
 
-        // Top-left: settings + currency chips. Top inset matches the city
-        // card (18); hug a little closer to the (notch-side) left edge.
+        // Top-left: currency chips (settings moved into the city panel). Top
+        // inset matches the city card (18); hug close to the (notch-side) left.
         Positioned(
           top: 18,
           left: 4,
           child: _TopLeftBar(
             uid: widget.data.uid,
             familyId: widget.data.familyId,
-            onSettings: _openSettings,
             onEarn: () =>
                 _openScreen('משימות', HomeTab(data: widget.data)),
             onCashOut: () => showCashOutSheet(context,
@@ -1074,14 +1083,12 @@ class _TopLeftBar extends StatelessWidget {
   const _TopLeftBar({
     required this.uid,
     required this.familyId,
-    required this.onSettings,
     required this.onEarn,
     required this.onCashOut,
   });
 
   final String uid;
   final String familyId;
-  final VoidCallback onSettings;
   final VoidCallback onEarn;
   final VoidCallback onCashOut;
 
@@ -1095,13 +1102,13 @@ class _TopLeftBar extends StatelessWidget {
         final w = snap.data?.data() ?? const {};
         final tokens = (w['tokens'] as num?)?.toInt() ?? 0;
         final xp = (w['points'] as num?)?.toInt() ?? 0;
-        // Force left-to-right ordering so the cluster reads gear → points →
-        // tokens like the design, independent of the ambient RTL direction.
+        // Force left-to-right ordering so the cluster reads points → tokens
+        // like the design, independent of the ambient RTL direction.
+        // Settings now lives inside the "My City" panel, so the chips hug the
+        // left edge.
         return Row(
           textDirection: TextDirection.ltr,
           children: [
-            _GearButton(onTap: onSettings),
-            const SizedBox(width: 8),
             _CurrencyChip(
               value: xp,
               label: 'נקודות',
@@ -1121,38 +1128,6 @@ class _TopLeftBar extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _GearButton extends StatelessWidget {
-  const _GearButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'הגדרות',
-      child: ScaleTap(
-        onTap: onTap,
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: const BoxDecoration(
-            color: _Chrome.card,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                  color: Color(0x33000000),
-                  blurRadius: 10,
-                  offset: Offset(0, 4)),
-            ],
-          ),
-          child: const Icon(Icons.settings_rounded,
-              color: _Chrome.inkSoft, size: 21),
-        ),
-      ),
     );
   }
 }
