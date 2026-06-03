@@ -337,7 +337,15 @@ class _CityScreenState extends State<CityScreen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg, textAlign: TextAlign.center),
+        content: Text(
+          msg,
+          textAlign: TextAlign.center,
+          style: bodyFont(
+            size: 15,
+            weight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
         backgroundColor: _Chrome.ink,
         duration: const Duration(milliseconds: 1600),
         behavior: SnackBarBehavior.floating,
