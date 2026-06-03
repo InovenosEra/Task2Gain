@@ -482,9 +482,23 @@ class CityGame extends FlameGame with TapCallbacks {
       ..lineTo(down(a).dx, down(a).dy)
       ..close();
 
-    // Right-front face (darker), left-front face (mid).
-    canvas.drawPath(face(right, bottom), Paint()..color = const Color(0xFF6B4A2E));
-    canvas.drawPath(face(bottom, left), Paint()..color = const Color(0xFF7C5838));
+    // Right-front + left-front soil faces, with a vertical gradient so the
+    // earth deepens toward the bottom instead of reading as a flat band.
+    void soil(Path p, Color c) {
+      final b = p.getBounds();
+      canvas.drawPath(
+        p,
+        Paint()
+          ..shader = Gradient.linear(
+            Offset(b.center.dx, b.top),
+            Offset(b.center.dx, b.bottom),
+            [_shade(c, 1.12), _shade(c, 0.82)],
+          ),
+      );
+    }
+
+    soil(face(right, bottom), const Color(0xFF6B4A2E));
+    soil(face(bottom, left), const Color(0xFF7C5838));
     // Grass overhang lip along the top of each side.
     canvas.drawPath(
         face(right, bottom)
@@ -650,10 +664,11 @@ class CityGame extends FlameGame with TapCallbacks {
       _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 0.38, 0.62,
           0.0, 0.12, _shade(style.roofColor, 0.5));
     } else {
-      // Right wall (in shadow) + front-right wall (mid) — lit by the scene light.
-      _face(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
+      // Right wall (in shadow) + front-right wall (mid) — lit by the scene
+      // light, with a subtle vertical gradient for depth.
+      _faceGrad(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
           _litRight(_wall));
-      _face(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
+      _faceGrad(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
           _litFront(_wall));
 
       // Windows: more rows the taller it is.
@@ -1092,9 +1107,9 @@ class CityGame extends FlameGame with TapCallbacks {
     const h = 16.0;
     Offset c(num gx, num gy) => _iso(gx, gy);
     Offset t(num gx, num gy) => _iso(gx, gy, h);
-    _face(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
+    _faceGrad(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
         _litRight(_wall));
-    _face(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
+    _faceGrad(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
         _litFront(_wall));
     _face(canvas, [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)],
         _litTop(_wall));
@@ -1350,6 +1365,35 @@ class CityGame extends FlameGame with TapCallbacks {
     }
     path.close();
     canvas.drawPath(path, Paint()..color = color);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0x22000000),
+    );
+  }
+
+  /// Like [_face] but fills with a subtle vertical gradient around [color]
+  /// (brighter at the top, darker toward the base) so large surfaces read with
+  /// depth instead of a flat uniform fill (Stage 4).
+  void _faceGrad(Canvas canvas, List<Offset> pts, Color color,
+      {double top = 1.07, double bottom = 0.9}) {
+    final path = Path()..moveTo(pts.first.dx, pts.first.dy);
+    for (final p in pts.skip(1)) {
+      path.lineTo(p.dx, p.dy);
+    }
+    path.close();
+    final b = path.getBounds();
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = Gradient.linear(
+          Offset(b.center.dx, b.top),
+          Offset(b.center.dx, b.bottom),
+          [_shade(color, top), _shade(color, bottom)],
+        ),
+    );
     canvas.drawPath(
       path,
       Paint()
