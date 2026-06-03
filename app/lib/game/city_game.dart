@@ -632,11 +632,11 @@ class CityGame extends FlameGame with TapCallbacks {
       _facePanel(canvas, c(x1, y1), c(x0, y1), t(x1, y1), t(x0, y1), 0.38, 0.62,
           0.0, 0.12, _shade(style.roofColor, 0.5));
     } else {
-      // Right wall (in shadow) + front-right wall (mid).
+      // Right wall (in shadow) + front-right wall (mid) — lit by the scene light.
       _face(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
-          _shade(_wall, 0.74));
+          _litRight(_wall));
       _face(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
-          _shade(_wall, 0.88));
+          _litFront(_wall));
 
       // Windows: more rows the taller it is.
       final rows = (h / 16).round().clamp(1, 5);
@@ -691,11 +691,12 @@ class CityGame extends FlameGame with TapCallbacks {
       final cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
       final roofH = h * 0.5 + 18;
       final apex = _iso(cx, cy, h + roofH);
-      // back/left (bright), right (dark), front (mid), left (mid-bright)
-      _face(canvas, [rim[0], rim[1], apex], _shade(roofC, 1.12));
-      _face(canvas, [rim[1], rim[2], apex], _shade(roofC, 0.74));
-      _face(canvas, [rim[2], rim[3], apex], _shade(roofC, 0.94));
-      _face(canvas, [rim[3], rim[0], apex], _shade(roofC, 1.04));
+      // Four pyramid slopes, each lit by its outward+up normal: north(0,-1,1),
+      // east(1,0,1), south(0,1,1), west(-1,0,1).
+      _face(canvas, [rim[0], rim[1], apex], _litN(roofC, 0, -0.707, 0.707));
+      _face(canvas, [rim[1], rim[2], apex], _litN(roofC, 0.707, 0, 0.707));
+      _face(canvas, [rim[2], rim[3], apex], _litN(roofC, 0, 0.707, 0.707));
+      _face(canvas, [rim[3], rim[0], apex], _litN(roofC, -0.707, 0, 0.707));
       // House gets a chimney; school gets a rooftop flag + a clock face.
       if (b.typeId == 'house') {
         _chimney(canvas, x1 - 0.30, y0 + 0.16, h);
@@ -718,17 +719,17 @@ class CityGame extends FlameGame with TapCallbacks {
       }
     } else if (style.roof == _Roof.dome) {
       // Civic landmark: flat cream roof with a golden dome + finial.
-      _face(canvas, rim, _shade(_wall, 1.05));
+      _face(canvas, rim, _litTop(_wall));
       _dome(canvas, (x0 + x1) / 2, (y0 + y1) / 2, h, roofC);
     } else {
-      _face(canvas, rim, _shade(roofC, 1.06));
-      // a slim parapet lip for depth
+      _face(canvas, rim, _litTop(roofC));
+      // a slim parapet lip for depth (right + front faces, then its top)
       final lip = 6.0;
       Offset l(int i) =>
           Offset(rim[i].dx, rim[i].dy - lip);
-      _face(canvas, [rim[1], rim[2], l(2), l(1)], _shade(roofC, 0.7));
-      _face(canvas, [rim[2], rim[3], l(3), l(2)], _shade(roofC, 0.85));
-      _face(canvas, [l(0), l(1), l(2), l(3)], _shade(roofC, 1.12));
+      _face(canvas, [rim[1], rim[2], l(2), l(1)], _litRight(roofC));
+      _face(canvas, [rim[2], rim[3], l(3), l(2)], _litFront(roofC));
+      _face(canvas, [l(0), l(1), l(2), l(3)], _litTop(roofC));
       // Apartment: a small rooftop mechanical unit.
       if (b.typeId == 'apartment') {
         final r = _iso((x0 + x1) / 2, (y0 + y1) / 2, h);
@@ -1072,11 +1073,11 @@ class CityGame extends FlameGame with TapCallbacks {
     Offset c(num gx, num gy) => _iso(gx, gy);
     Offset t(num gx, num gy) => _iso(gx, gy, h);
     _face(canvas, [c(x1, y0), c(x1, y1), t(x1, y1), t(x1, y0)],
-        _shade(_wall, 0.74));
+        _litRight(_wall));
     _face(canvas, [c(x1, y1), c(x0, y1), t(x0, y1), t(x1, y1)],
-        _shade(_wall, 0.88));
+        _litFront(_wall));
     _face(canvas, [t(x0, y0), t(x1, y0), t(x1, y1), t(x0, y1)],
-        _shade(_wall, 1.1));
+        _litTop(_wall));
     final top = _iso((x0 + x1) / 2, (y0 + y1) / 2, h);
     canvas.drawCircle(Offset(top.dx, top.dy - 10), 9,
         Paint()..color = const Color(0xFFF4B942));
@@ -1310,6 +1311,36 @@ class CityGame extends FlameGame with TapCallbacks {
     int ch(double v) => (v * 255.0 * factor).clamp(0, 255).round();
     return Color.fromARGB(255, ch(c.r), ch(c.g), ch(c.b));
   }
+
+  // --- Stage 0: directional light model -------------------------------------
+  // A single scene light: a warm key from the upper-left-above (matching the
+  // sky's sun glow) plus a cool ambient fill. Each face is lit by its world
+  // normal · light, so brightness is consistent across every object instead of
+  // hand-tuned per call. World axes: +x screen-down-right, +y screen-down-left,
+  // +z up. The light vector below is already unit-length.
+  static const double _lx = -0.30, _ly = 0.55, _lz = 0.78;
+  static const double _kAmbient = 0.66; // floor brightness (shadowed faces)
+  static const double _kKey = 0.60; // key-light contribution at full facing
+
+  /// Lights [base] by a face normal (nx, ny, nz). The diffuse term warms the
+  /// lit channels and cools the shadowed ones, then scales overall brightness.
+  Color _litN(Color base, double nx, double ny, double nz) {
+    final dot = nx * _lx + ny * _ly + nz * _lz;
+    final d = dot < 0 ? 0.0 : dot; // diffuse 0..1
+    final m = _kAmbient + _kKey * d; // brightness multiplier
+    int ch(double v, double warm, double cool) {
+      final tint = warm * d + cool * (1 - d); // warm where lit, cool in shadow
+      return (v * 255.0 * m * tint).clamp(0, 255).round();
+    }
+
+    return Color.fromARGB(255, ch(base.r, 1.06, 0.90), ch(base.g, 1.00, 0.96),
+        ch(base.b, 0.86, 1.12));
+  }
+
+  // Canonical box-face normals.
+  Color _litTop(Color c) => _litN(c, 0, 0, 1);
+  Color _litRight(Color c) => _litN(c, 1, 0, 0); // screen lower-right wall
+  Color _litFront(Color c) => _litN(c, 0, 1, 0); // screen lower-left wall
 
   /// Inverse iso projection: which grid cell a screen point falls on (null if
   /// outside the board). Shared by taps and drag-to-move.
