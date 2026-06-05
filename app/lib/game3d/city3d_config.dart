@@ -17,8 +17,16 @@ const bool kUse3DCity =
 /// Asset directory (registered in pubspec.yaml) holding the 3D building GLBs.
 const String kCity3DModelDir = 'assets/city3d/models/';
 
-/// Shared Kenney colormap palette texture applied to the placeholder models.
+/// Shared Kenney colormap palette texture, used as a fallback for models that
+/// have no embedded textures (e.g. the Kenney placeholder). Models that embed
+/// their own textures (e.g. the ITHappy Cartoon City pack) ignore it.
 const String kCity3DColormap = 'assets/city3d/textures/colormap.png';
+
+/// Target horizontal footprint (world units) every building is auto-scaled to,
+/// regardless of the source model's native size. Kept a bit under the cell
+/// spacing ([kCell3DSpacing], 2.4) so neighbours don't touch. Height scales
+/// proportionally, so towers stay tall and houses stay short.
+const double kCity3DTargetFootprint = 2.0;
 
 /// PLACEHOLDER model mapping — building type id → GLB filename under
 /// [kCity3DModelDir].
