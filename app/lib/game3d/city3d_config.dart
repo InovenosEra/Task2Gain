@@ -28,36 +28,43 @@ const String kCity3DColormap = 'assets/city3d/textures/colormap.png';
 /// proportionally, so towers stay tall and houses stay short.
 const double kCity3DTargetFootprint = 2.0;
 
-/// PLACEHOLDER model mapping — building type id → GLB filename under
-/// [kCity3DModelDir].
+/// Model mapping — building type id → GLB filename under [kCity3DModelDir].
 ///
-/// Today every type renders the *same* Kenney `building-m.glb` block. These
-/// are deliberately stand-ins: we'll swap in distinct, cozier per-type models
-/// later. Keep this map the single source of truth so that swap is a one-file
-/// edit. Keys are `BuildingType.id` values from `game/building_catalog.dart`.
+/// Uses the ITHappy MegaCity pack (embedded textures, auto-scaled/recentered by
+/// the loader). Keep this map the single source of truth so re-skinning is a
+/// one-file edit. Keys are `BuildingType.id` values from
+/// `game/building_catalog.dart`.
+///
+/// For per-level visual *variants* later, this can become
+/// `Map<String, Map<int, String>>` (type → level → model) without touching the
+/// renderer — level is currently expressed as scale (see `scaleForLevel`).
+///
+/// Two types have no exact MegaCity match (user-confirmed):
+///   • factory → tool_store (closest industrial/commercial building)
+///   • park    → children_playground (closest green/recreational area)
 const Map<String, String> kBuildingModels = {
   // residential
-  'house': 'building-m.glb',
-  'apartment': 'building-m.glb',
-  'tower': 'building-m.glb',
+  'house': 'residental_building_001.glb',
+  'apartment': 'elite_residental_building_001.glb',
+  'tower': 'skyscraper_001.glb',
   // business
-  'shop': 'building-m.glb',
-  'cafe': 'building-m.glb',
-  'factory': 'building-m.glb',
-  'bank': 'building-m.glb',
+  'shop': 'supermarket_001.glb',
+  'cafe': 'coffee_shop_001.glb',
+  'factory': 'tool_store_001.glb', // no factory model; closest commercial
+  'bank': 'business_center_001.glb', // no bank model; business center
   // civic
-  'school': 'building-m.glb',
-  'hospital': 'building-m.glb',
-  'cityhall': 'building-m.glb',
+  'school': 'school_001.glb',
+  'hospital': 'hospital_001.glb',
+  'cityhall': 'government_bilding_001.glb',
   // scenery
-  'park': 'building-m.glb',
-  'fountain': 'building-m.glb',
-  'decor': 'building-m.glb',
-  'road': 'building-m.glb',
+  'park': 'children_playground_001.glb', // no park model; playground
+  'fountain': 'fountain_001.glb',
+  'decor': 'monument_001.glb',
+  'road': 'road_001.glb',
 };
 
 /// Used when a building type has no entry in [kBuildingModels].
-const String kCity3DFallbackModel = 'building-m.glb';
+const String kCity3DFallbackModel = 'residental_building_001.glb';
 
 /// Resolves a building type id to a full bundled asset path, falling back to
 /// [kCity3DFallbackModel] for unknown types.
