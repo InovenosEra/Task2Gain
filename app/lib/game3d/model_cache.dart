@@ -35,49 +35,70 @@ class AssetByteCache {
       (await rootBundle.load(key)).buffer.asUint8List();
 }
 
-/// Per-model normalization: how to scale a source model to the target
-/// footprint and recenter it so its base sits at y=0, centered on the origin
-/// in X/Z. Computed once per model from its bounding box. [needsColormap] is
-/// true for models without embedded textures (the Kenney placeholder), which
-/// fall back to the shared colormap.
+/// Per-model normalization: how to scale a source model so its footprint is
+/// uniform and recenter it so its base sits at y=0, centered on the origin in
+/// X/Z. Computed once per model from its bounding box.
+///
+/// Scaling is a HYBRID: [horizontalScale] (X/Z) normalizes the footprint, while
+/// [verticalScale] (Y) emphasizes native height so tall models (skyscrapers)
+/// read as tall instead of stubby — without changing their footprint. Short
+/// models keep uniform scale (no distortion). [needsColormap] is true for
+/// models without embedded textures (Kenney placeholder), which use the
+/// shared colormap fallback.
 @immutable
 class ModelNormalization {
   const ModelNormalization({
-    required this.scale,
+    required this.horizontalScale,
+    required this.verticalScale,
     required this.offset,
     required this.needsColormap,
   });
 
-  final double scale;
+  final double horizontalScale;
+  final double verticalScale;
   final vm.Vector3 offset;
   final bool needsColormap;
 
-  /// Local transform that scales the source model and shifts its base-center
+  /// Local transform: non-uniform scale (footprint vs height) + base-center
   /// to the origin. Applied to the model node; the placement transform (tile
   /// position + level scale) is applied to the wrapper above it.
-  vm.Matrix4 get transform =>
-      vm.Matrix4.translation(offset)..scaleByDouble(scale, scale, scale, 1);
+  vm.Matrix4 get transform => vm.Matrix4.translation(offset)
+    ..scaleByDouble(horizontalScale, verticalScale, horizontalScale, 1);
 
   /// Derives a normalization from a model's [info]. Scales the larger of the
-  /// X/Z extents to [kCity3DTargetFootprint]; offset places the footprint
-  /// center + base at the origin. Falls back to identity for boundless models.
+  /// X/Z extents to [kCity3DTargetFootprint]; emphasizes height for tall
+  /// models (see [kCity3DHeightRef]/[kCity3DMaxVStretch]); offset places the
+  /// footprint center + base at the origin. Identity for boundless models.
   factory ModelNormalization.from(GlbInfo info) {
     final b = info.bounds;
     final needsColormap = !info.hasEmbeddedTextures;
     if (b == null) {
       return ModelNormalization(
-          scale: 1, offset: vm.Vector3.zero(), needsColormap: needsColormap);
+        horizontalScale: 1,
+        verticalScale: 1,
+        offset: vm.Vector3.zero(),
+        needsColormap: needsColormap,
+      );
     }
     final footprint = math.max(b.max.x - b.min.x, b.max.z - b.min.z);
-    final scale =
-        footprint > 1e-6 ? kCity3DTargetFootprint / footprint : 1.0;
-    // After scaling vertex v -> scale*v, we want the footprint center + base
-    // (cx, minY, cz) to land at the origin, so offset = -scale * that point.
+    final h = footprint > 1e-6 ? kCity3DTargetFootprint / footprint : 1.0;
+    // Tall native models stretch vertically beyond the footprint scale, capped
+    // so distortion stays mild; short models (height <= ref) stay uniform.
+    final nativeHeight = b.max.y - b.min.y;
+    final emphasis =
+        (nativeHeight / kCity3DHeightRef).clamp(1.0, kCity3DMaxVStretch);
+    final v = h * emphasis;
+    // After scaling, we want the footprint center + base (cx, minY, cz) at the
+    // origin, so offset = -(scale) * that point (per axis).
     final cx = (b.min.x + b.max.x) / 2;
     final cz = (b.min.z + b.max.z) / 2;
-    final offset = vm.Vector3(-scale * cx, -scale * b.min.y, -scale * cz);
+    final offset = vm.Vector3(-h * cx, -v * b.min.y, -h * cz);
     return ModelNormalization(
-        scale: scale, offset: offset, needsColormap: needsColormap);
+      horizontalScale: h,
+      verticalScale: v,
+      offset: offset,
+      needsColormap: needsColormap,
+    );
   }
 }
 
@@ -139,6 +160,13 @@ class City3DModels {
     if (norm.needsColormap) _applyColormap(model);
 
     return Node()..add(model);
+  }
+
+  /// A fresh instance of the MegaCity grass ground tile at its native size
+  /// (caller tiles it). Bytes are cached so repeated tiles only re-parse.
+  Future<Node> groundTile() async {
+    final bytes = await _bytes.load(kCity3DGroundTile);
+    return Node.fromGlbBytes(bytes);
   }
 
   void _applyColormap(Node root) {

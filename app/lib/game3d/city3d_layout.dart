@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:vector_math/vector_math.dart' as vm;
 
 import '../models/city.dart';
@@ -51,6 +53,17 @@ vm.Vector3? rayGroundHit(vm.Vector3 origin, vm.Vector3 dir) {
   final t = -origin.y / dir.y;
   if (t <= 0) return null;
   return origin + dir * t;
+}
+
+/// Camera distance (orbit radius) needed to frame a footprint of half-extents
+/// [halfWidth] x [halfDepth] (world units) within a camera of vertical FOV
+/// [fovRadiansY]. Treats the region as a bounding circle and fits it to the
+/// (smaller) vertical FOV, so the whole thing is guaranteed in frame.
+double fitRadius(double halfWidth, double halfDepth, double fovRadiansY) {
+  final r = math.sqrt(halfWidth * halfWidth + halfDepth * halfDepth);
+  final halfFov = fovRadiansY / 2;
+  final s = math.sin(halfFov);
+  return s > 1e-6 ? r / s : r;
 }
 
 /// Stable key for a grid cell, used to track which node renders which cell.

@@ -79,6 +79,26 @@ void main() {
     });
   });
 
+  group('fitRadius', () {
+    test('larger footprints need a larger radius', () {
+      final small = fitRadius(5, 5, 45 * 3.14159265 / 180);
+      final big = fitRadius(15, 15, 45 * 3.14159265 / 180);
+      expect(big, greaterThan(small));
+    });
+
+    test('a narrower FOV needs a larger radius for the same footprint', () {
+      final wide = fitRadius(10, 10, 60 * 3.14159265 / 180);
+      final narrow = fitRadius(10, 10, 30 * 3.14159265 / 180);
+      expect(narrow, greaterThan(wide));
+    });
+
+    test('fits the bounding circle to the vertical half-FOV', () {
+      // r = sqrt(10^2+10^2)=14.14; halfFov=22.5deg, sin=.3827 -> ~36.95
+      final r = fitRadius(10, 10, 45 * 3.14159265 / 180);
+      expect(r, closeTo(36.95, 0.2));
+    });
+  });
+
   group('scaleForLevel', () {
     test('level 1 is unit scale and higher levels grow', () {
       expect(scaleForLevel(1), 1.0);

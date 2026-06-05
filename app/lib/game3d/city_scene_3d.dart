@@ -61,10 +61,21 @@ class _CityScene3DState extends State<CityScene3D> {
   double _radius = 17;
   final vm.Vector3 _target = vm.Vector3(0, 0.6, 0);
 
-  static const double _minRadius = 5;
-  static const double _maxRadius = 30;
+  static const double _minRadius = 5; // zoom-in limit (get close)
   static const double _minPitch = 0.12;
   static const double _maxPitch = 1.45;
+  static const double _fovRadiansY = 45 * pi / 180; // matches PerspectiveCamera
+  static const double _cityMargin = 3.0; // world units around the city
+
+  // Zoom-out limit, derived from the city's extent so the whole city fits at
+  // max zoom-out (and adapts as the city grows). Recomputed when buildings
+  // change; floored so a tiny/empty city still pulls back sensibly.
+  double _maxRadius = 40;
+
+  // Ground sizing: tile MegaCity's 15x15 grass over a span comfortably larger
+  // than the full grid so it fills the frame at max zoom-out.
+  static const double _groundTileSize = 15.0;
+  static const double _groundSpan = 75.0;
 
   double _gestureStartRadius = 17;
   Size _viewSize = Size.zero;
@@ -84,6 +95,7 @@ class _CityScene3DState extends State<CityScene3D> {
     _ready = _init();
     _desired = widget.buildings;
     _targetGen = 1;
+    _recomputeMaxRadius();
     _pump();
     // Continuous repaint keeps the 3D view live and smooth. Updating the popup
     // anchor here (between frames) — not during build — avoids notifying the
@@ -103,6 +115,7 @@ class _CityScene3DState extends State<CityScene3D> {
     if (!identical(old.buildings, widget.buildings)) {
       _desired = widget.buildings;
       _targetGen++;
+      _recomputeMaxRadius();
       _pump();
     }
     // Re-apply the transform of the de-selected and newly-selected cells so the
@@ -152,17 +165,30 @@ class _CityScene3DState extends State<CityScene3D> {
       ..radius = 0.85
       ..smoothness = 0.6;
 
-    // Warm ground plane (top surface at y = 0) — receives the shadows.
-    final ground = Node(
+    // Cohesive ground from MegaCity's own grass tile (15x15), tiled to a grid
+    // that comfortably exceeds the city so it never reads as a void. A thin
+    // warm base sits just under it to hide any seams / give the plot edges.
+    final base = Node(
       mesh: Mesh(
-        CuboidGeometry(vm.Vector3(40, 0.2, 40)),
+        CuboidGeometry(vm.Vector3(_groundSpan, 0.4, _groundSpan)),
         PhysicallyBasedMaterial()
-          ..baseColorFactor = vm.Vector4(0.46, 0.38, 0.26, 1.0)
+          ..baseColorFactor = vm.Vector4(0.34, 0.44, 0.24, 1.0) // warm grass
           ..metallicFactor = 0.0
           ..roughnessFactor = 0.95,
       ),
-    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.1, 0));
-    scene.add(ground);
+    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.22, 0));
+    scene.add(base);
+
+    const tile = _groundTileSize;
+    final reach = (_groundSpan / tile / 2).ceil();
+    for (var ix = -reach; ix <= reach; ix++) {
+      for (var iz = -reach; iz <= reach; iz++) {
+        final t = await _models.groundTile();
+        t.localTransform =
+            vm.Matrix4.translation(vm.Vector3(ix * tile, 0, iz * tile));
+        scene.add(t);
+      }
+    }
 
     await _models.warmUp();
   }
@@ -274,6 +300,37 @@ class _CityScene3DState extends State<CityScene3D> {
       (v.x / v.w * 0.5 + 0.5) * _viewSize.width,
       (1 - (v.y / v.w * 0.5 + 0.5)) * _viewSize.height,
     );
+  }
+
+  /// Recomputes the zoom-out limit so the whole city fits at max zoom-out.
+  /// Uses the world bounding box of the placed buildings (or the full grid when
+  /// empty), plus a margin, fitted to the camera FOV. Floored so a tiny city
+  /// still pulls back, capped so it never goes absurd.
+  void _recomputeMaxRadius() {
+    double minX, maxX, minZ, maxZ;
+    if (widget.buildings.isEmpty) {
+      final a = cellToWorld(0, 0, gridSize: widget.gridSize);
+      final b = cellToWorld(
+          widget.gridSize - 1, widget.gridSize - 1,
+          gridSize: widget.gridSize);
+      minX = a.x; maxX = b.x; minZ = a.z; maxZ = b.z;
+    } else {
+      minX = minZ = double.infinity;
+      maxX = maxZ = -double.infinity;
+      for (final bld in widget.buildings) {
+        final w = cellToWorld(bld.gridX, bld.gridY, gridSize: widget.gridSize);
+        minX = min(minX, w.x);
+        maxX = max(maxX, w.x);
+        minZ = min(minZ, w.z);
+        maxZ = max(maxZ, w.z);
+      }
+    }
+    final halfW = (maxX - minX) / 2 + _cityMargin;
+    final halfD = (maxZ - minZ) / 2 + _cityMargin;
+    final fit = fitRadius(halfW, halfD, _fovRadiansY);
+    _maxRadius = fit.clamp(22.0, 110.0);
+    // Never let the current radius exceed the new cap.
+    if (_radius > _maxRadius) _radius = _maxRadius;
   }
 
   PerspectiveCamera _camera() {

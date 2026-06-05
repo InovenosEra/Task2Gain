@@ -1,7 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:task2play/game3d/glb_bounds.dart';
 import 'package:task2play/game3d/model_cache.dart';
+import 'package:vector_math/vector_math.dart' as vm;
 
 void main() {
   group('AssetByteCache', () {
@@ -64,6 +66,48 @@ void main() {
       await cache.load('a.glb');
 
       expect(count, 2);
+    });
+  });
+
+  group('ModelNormalization', () {
+    GlbInfo info(double sx, double sy, double sz, {bool embedded = true}) =>
+        GlbInfo(
+          bounds: vm.Aabb3.minMax(
+              vm.Vector3(0, 0, 0), vm.Vector3(sx, sy, sz)),
+          hasEmbeddedTextures: embedded,
+        );
+
+    test('normalizes footprint uniformly for a short building', () {
+      // 12 wide, 10 tall (<= height ref) -> uniform scale, no vertical emphasis.
+      final n = ModelNormalization.from(info(12, 10, 12));
+      expect(n.horizontalScale, closeTo(n.verticalScale, 1e-9));
+    });
+
+    test('emphasizes height for a tall building (hybrid)', () {
+      // 60 wide, 75 tall -> footprint dominated, but vertical gets stretched.
+      final n = ModelNormalization.from(info(60, 75, 28));
+      expect(n.verticalScale, greaterThan(n.horizontalScale),
+          reason: 'tall model should stretch vertically');
+    });
+
+    test('vertical stretch is capped (mild distortion)', () {
+      final n = ModelNormalization.from(info(60, 500, 28));
+      expect(n.verticalScale / n.horizontalScale, lessThanOrEqualTo(2.4001));
+    });
+
+    test('recenter offset puts base at y=0 and footprint center at origin', () {
+      final n = ModelNormalization.from(info(12, 20, 12)); // min at origin
+      // base (minY=0) -> offset.y = 0; center (6,*,6) -> offset.x/z negative.
+      expect(n.offset.y, closeTo(0, 1e-9));
+      expect(n.offset.x, closeTo(-n.horizontalScale * 6, 1e-6));
+    });
+
+    test('embedded-texture models do not need the colormap fallback', () {
+      expect(ModelNormalization.from(info(10, 10, 10)).needsColormap, isFalse);
+      expect(
+          ModelNormalization.from(info(10, 10, 10, embedded: false))
+              .needsColormap,
+          isTrue);
     });
   });
 }

@@ -24,9 +24,18 @@ const String kCity3DColormap = 'assets/city3d/textures/colormap.png';
 
 /// Target horizontal footprint (world units) every building is auto-scaled to,
 /// regardless of the source model's native size. Kept a bit under the cell
-/// spacing ([kCell3DSpacing], 2.4) so neighbours don't touch. Height scales
-/// proportionally, so towers stay tall and houses stay short.
+/// spacing ([kCell3DSpacing], 2.4) so neighbours don't touch.
 const double kCity3DTargetFootprint = 2.0;
+
+/// Hybrid height scaling: footprints stay uniform, but a model taller than
+/// [kCity3DHeightRef] native units is stretched vertically (beyond the uniform
+/// footprint scale) so towers read as tall instead of stubby — capped at
+/// [kCity3DMaxVStretch]x to keep distortion mild. Short models are untouched.
+const double kCity3DHeightRef = 22.0;
+const double kCity3DMaxVStretch = 2.4;
+
+/// MegaCity flat grass tile (15x15) tiled to form the city ground.
+const String kCity3DGroundTile = 'assets/city3d/models/grass_001.glb';
 
 /// Model mapping — building type id → GLB filename under [kCity3DModelDir].
 ///
