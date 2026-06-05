@@ -23,6 +23,36 @@ vm.Vector3 cellToWorld(
 /// per-level model variants later only changes the renderer, not this math.)
 double scaleForLevel(int level) => 1.0 + (level - 1).clamp(0, 100) * 0.14;
 
+/// Inverse of [cellToWorld]: maps a world XZ position back to the nearest grid
+/// cell. Used for tap-to-place / tap-to-select hit testing.
+({int x, int y}) worldToCell(
+  double worldX,
+  double worldZ, {
+  int gridSize = 10,
+  double spacing = kCell3DSpacing,
+}) {
+  final c = (gridSize - 1) / 2.0;
+  return (
+    x: (worldX / spacing + c).round(),
+    y: (worldZ / spacing + c).round(),
+  );
+}
+
+/// Whether a cell is inside a [gridSize] x [gridSize] board.
+bool cellInBounds(int x, int y, {int gridSize = 10}) =>
+    x >= 0 && y >= 0 && x < gridSize && y < gridSize;
+
+/// Intersects a ray (from [origin] along [dir]) with the ground plane y = 0.
+/// Returns the hit point, or null if the ray is parallel to or points away
+/// from the plane. Pure — the camera-dependent screen→ray unprojection lives
+/// in the widget; this is the testable geometry.
+vm.Vector3? rayGroundHit(vm.Vector3 origin, vm.Vector3 dir) {
+  if (dir.y.abs() < 1e-6) return null;
+  final t = -origin.y / dir.y;
+  if (t <= 0) return null;
+  return origin + dir * t;
+}
+
 /// Stable key for a grid cell, used to track which node renders which cell.
 String cellKey(int gridX, int gridY) => '$gridX,$gridY';
 

@@ -63,6 +63,10 @@ class _CityScreenState extends State<CityScreen>
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _walletSub;
   int _tokens = 0; // current token balance (for tray affordability)
 
+  // Screen-space anchor (above the selected building) for the upgrade popup in
+  // 3D mode, pushed each frame by CityScene3D as the camera moves.
+  final ValueNotifier<Offset?> _anchor3D = ValueNotifier<Offset?>(null);
+
   // The app is locked to a single landscape flip (see main.dart), so the
   // camera / Dynamic Island is always on the left edge — the chrome insets
   // the left and hugs the clear right edge.
@@ -157,6 +161,7 @@ class _CityScreenState extends State<CityScreen>
     _levelUpTimer?.cancel();
     _citySub?.cancel();
     _walletSub?.cancel();
+    _anchor3D.dispose();
     super.dispose();
   }
 
@@ -579,7 +584,12 @@ class _CityScreenState extends State<CityScreen>
         // the default fallback.
         Positioned.fill(
           child: kUse3DCity
-              ? CityScene3D(buildings: _city.buildings)
+              ? CityScene3D(
+                  buildings: _city.buildings,
+                  onCellTapped: _onCellTapped,
+                  selectedCell: _selectedCell,
+                  anchorSink: _anchor3D,
+                )
               : GameWidget(game: _game),
         ),
 
@@ -603,7 +613,9 @@ class _CityScreenState extends State<CityScreen>
         // While a building is selected: a tap anywhere deselects it, and a
         // drag that starts on the selected building relocates it (dropping on
         // an empty tile). The upgrade popup sits above and keeps its taps.
-        if (_selectedCell != null)
+        // Flame only — in 3D the CityScene3D handles its own taps (and
+        // relocation goes through the tap-based move mode).
+        if (_selectedCell != null && !kUse3DCity)
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -659,20 +671,9 @@ class _CityScreenState extends State<CityScreen>
     final type = buildingTypeById(b.typeId);
     final nextCost = type?.tokenCostForLevel(b.level + 1) ?? 0;
     final canAfford = nextCost <= _tokens;
-    final anchor = _game.anchorAbove(cell.x, cell.y);
-    const w = 240.0;
-    // Clamp on-screen so the popup never clips off the top or sides for
-    // buildings near the grid edges / tall builds near the back.
-    final screen = MediaQuery.of(context).size;
-    final left = (anchor.dx - w / 2).clamp(8.0, screen.width - w - 8);
-    final top = (anchor.dy - 78).clamp(8.0, screen.height - 150);
-    return Positioned(
-      left: left,
-      top: top,
-      width: w,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+    final card = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
           GestureDetector(
             // absorb taps on the card so only the button acts (and the
             // surrounding barrier handles deselect)
@@ -778,8 +779,28 @@ class _CityScreenState extends State<CityScreen>
           // little pointer
           CustomPaint(size: const Size(16, 8), painter: _DownTriangle()),
         ],
-      ),
     );
+
+    if (kUse3DCity) {
+      // Follow the building as the camera moves; hide when off-screen.
+      return ValueListenableBuilder<Offset?>(
+        valueListenable: _anchor3D,
+        builder: (context, anchor, _) => anchor == null
+            ? const SizedBox.shrink()
+            : _positionedPopup(context, anchor, card),
+      );
+    }
+    return _positionedPopup(context, _game.anchorAbove(cell.x, cell.y), card);
+  }
+
+  /// Positions [card] above [anchor], clamped on-screen so it never clips off
+  /// the top or sides for edge / tall buildings.
+  Widget _positionedPopup(BuildContext context, Offset anchor, Widget card) {
+    const w = 240.0;
+    final screen = MediaQuery.of(context).size;
+    final left = (anchor.dx - w / 2).clamp(8.0, screen.width - w - 8);
+    final top = (anchor.dy - 78).clamp(8.0, screen.height - 150);
+    return Positioned(left: left, top: top, width: w, child: card);
   }
 
   Widget _chrome(BuildContext context) {

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:task2play/game3d/city3d_layout.dart';
 import 'package:task2play/models/city.dart';
+import 'package:vector_math/vector_math.dart' as vm;
 
 PlacedBuilding b(String type, int x, int y, {int level = 1}) =>
     PlacedBuilding(typeId: type, gridX: x, gridY: y, level: level);
@@ -23,6 +24,58 @@ void main() {
       final a = cellToWorld(0, 0, gridSize: 4, spacing: 3.0);
       final c = cellToWorld(1, 0, gridSize: 4, spacing: 3.0);
       expect(c.x - a.x, closeTo(3.0, 1e-9));
+    });
+  });
+
+  group('worldToCell', () {
+    test('is the inverse of cellToWorld for every cell', () {
+      for (var gx = 0; gx < 10; gx++) {
+        for (var gy = 0; gy < 10; gy++) {
+          final w = cellToWorld(gx, gy);
+          final cell = worldToCell(w.x, w.z);
+          expect(cell.x, gx);
+          expect(cell.y, gy);
+        }
+      }
+    });
+
+    test('rounds a near-center world point to the nearest cell', () {
+      final w = cellToWorld(3, 4, spacing: 2.0);
+      final cell = worldToCell(w.x + 0.4, w.z - 0.4, spacing: 2.0);
+      expect(cell, (x: 3, y: 4));
+    });
+  });
+
+  group('cellInBounds', () {
+    test('accepts cells inside and rejects cells outside', () {
+      expect(cellInBounds(0, 0), isTrue);
+      expect(cellInBounds(9, 9), isTrue);
+      expect(cellInBounds(-1, 0), isFalse);
+      expect(cellInBounds(0, 10), isFalse);
+    });
+  });
+
+  group('rayGroundHit', () {
+    test('straight-down ray hits directly below the origin', () {
+      final hit = rayGroundHit(vm.Vector3(2, 10, -3), vm.Vector3(0, -1, 0));
+      expect(hit, isNotNull);
+      expect(hit!.x, closeTo(2, 1e-9));
+      expect(hit.y, closeTo(0, 1e-9));
+      expect(hit.z, closeTo(-3, 1e-9));
+    });
+
+    test('angled ray hits further along the plane', () {
+      final hit = rayGroundHit(vm.Vector3(0, 10, 0), vm.Vector3(1, -1, 0));
+      expect(hit!.x, closeTo(10, 1e-9));
+      expect(hit.z, closeTo(0, 1e-9));
+    });
+
+    test('returns null when parallel to the ground', () {
+      expect(rayGroundHit(vm.Vector3(0, 10, 0), vm.Vector3(1, 0, 0)), isNull);
+    });
+
+    test('returns null when pointing away from the ground', () {
+      expect(rayGroundHit(vm.Vector3(0, 10, 0), vm.Vector3(0, 1, 0)), isNull);
     });
   });
 

@@ -21,6 +21,9 @@ class CityScene3D extends StatefulWidget {
     super.key,
     required this.buildings,
     this.gridSize = 10,
+    this.onCellTapped,
+    this.selectedCell,
+    this.anchorSink,
   });
 
   /// The player's placed buildings, straight from the city model. A new list
@@ -29,6 +32,18 @@ class CityScene3D extends StatefulWidget {
 
   /// Grid dimension, used to center the city on the origin.
   final int gridSize;
+
+  /// Called when the player taps an in-bounds grid cell. Routes to the same
+  /// select / place / move logic the Flame board uses (`_onCellTapped`).
+  final void Function(int gx, int gy)? onCellTapped;
+
+  /// The currently selected cell, lifted + highlighted in the scene.
+  final ({int x, int y})? selectedCell;
+
+  /// Receives the screen-space anchor (a point just above the selected
+  /// building) each frame, so the parent can float the upgrade popup over it.
+  /// Set to null when nothing is selected or it's off-screen.
+  final ValueNotifier<Offset?>? anchorSink;
 
   @override
   State<CityScene3D> createState() => _CityScene3DState();
@@ -70,9 +85,13 @@ class _CityScene3DState extends State<CityScene3D> {
     _desired = widget.buildings;
     _targetGen = 1;
     _pump();
-    // Continuous repaint keeps the 3D view live and smooth.
+    // Continuous repaint keeps the 3D view live and smooth. Updating the popup
+    // anchor here (between frames) — not during build — avoids notifying the
+    // parent's ValueListenableBuilder mid-build.
     _ticker = Ticker((_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      _updateAnchor();
+      setState(() {});
     })..start();
   }
 
@@ -85,6 +104,17 @@ class _CityScene3DState extends State<CityScene3D> {
       _desired = widget.buildings;
       _targetGen++;
       _pump();
+    }
+    // Re-apply the transform of the de-selected and newly-selected cells so the
+    // highlight lift follows the selection.
+    if (old.selectedCell != widget.selectedCell) {
+      for (final cell in [old.selectedCell, widget.selectedCell]) {
+        if (cell == null) continue;
+        final key = cellKey(cell.x, cell.y);
+        final node = _placed[key];
+        final spec = _spec[key];
+        if (node != null && spec != null) _transformFor(node, spec);
+      }
     }
   }
 
@@ -184,8 +214,66 @@ class _CityScene3DState extends State<CityScene3D> {
 
   void _transformFor(Node node, PlacedBuilding b) {
     final pos = cellToWorld(b.gridX, b.gridY, gridSize: widget.gridSize);
+    final sel = widget.selectedCell;
+    if (sel != null && sel.x == b.gridX && sel.y == b.gridY) {
+      pos.y += _selectionLift; // hop the selected building up a touch
+    }
     final s = scaleForLevel(b.level);
     node.localTransform = vm.Matrix4.translation(pos)..scaleByDouble(s, s, s, 1);
+  }
+
+  static const double _selectionLift = 0.5;
+
+  /// Anchor height (world units) above a cell where the popup should point.
+  static const double _anchorHeight = 2.4;
+
+  // --- Tap → grid cell --------------------------------------------------
+  void _onTapUp(TapUpDetails d) {
+    final cb = widget.onCellTapped;
+    if (cb == null || _viewSize == Size.zero) return;
+    final ray = _screenRay(d.localPosition);
+    if (ray == null) return;
+    final hit = rayGroundHit(ray.origin, ray.dir);
+    if (hit == null) return;
+    final cell = worldToCell(hit.x, hit.z, gridSize: widget.gridSize);
+    if (!cellInBounds(cell.x, cell.y, gridSize: widget.gridSize)) return;
+    cb(cell.x, cell.y);
+  }
+
+  /// Builds a world-space ray from a screen point through the camera.
+  ({vm.Vector3 origin, vm.Vector3 dir})? _screenRay(Offset local) {
+    final cam = _camera();
+    final worldFromClip = vm.Matrix4.inverted(cam.getViewTransform(_viewSize));
+    final ndcX = (local.dx / _viewSize.width) * 2 - 1;
+    final ndcY = 1 - (local.dy / _viewSize.height) * 2;
+    final v = vm.Vector4(ndcX, ndcY, 1, 1)..applyMatrix4(worldFromClip);
+    if (v.w == 0) return null;
+    final far = vm.Vector3(v.x / v.w, v.y / v.w, v.z / v.w);
+    final origin = cam.position;
+    return (origin: origin, dir: (far - origin)..normalize());
+  }
+
+  /// Projects the selected cell's anchor to a screen point (null if behind the
+  /// camera or nothing selected), and pushes it to [widget.anchorSink].
+  void _updateAnchor() {
+    final sink = widget.anchorSink;
+    if (sink == null) return;
+    final sel = widget.selectedCell;
+    if (sel == null || _viewSize == Size.zero) {
+      sink.value = null;
+      return;
+    }
+    final w = cellToWorld(sel.x, sel.y, gridSize: widget.gridSize);
+    final clip = _camera().getViewTransform(_viewSize);
+    final v = vm.Vector4(w.x, _anchorHeight, w.z, 1)..applyMatrix4(clip);
+    if (v.w <= 0) {
+      sink.value = null;
+      return;
+    }
+    sink.value = Offset(
+      (v.x / v.w * 0.5 + 0.5) * _viewSize.width,
+      (1 - (v.y / v.w * 0.5 + 0.5)) * _viewSize.height,
+    );
   }
 
   PerspectiveCamera _camera() {
@@ -235,6 +323,7 @@ class _CityScene3DState extends State<CityScene3D> {
 
   @override
   void dispose() {
+    widget.anchorSink?.value = null;
     _ticker.dispose();
     scene.removeAll();
     super.dispose();
@@ -265,6 +354,7 @@ class _CityScene3DState extends State<CityScene3D> {
             _viewSize = constraints.biggest;
             return GestureDetector(
               behavior: HitTestBehavior.opaque,
+              onTapUp: _onTapUp,
               onScaleStart: _onScaleStart,
               onScaleUpdate: _onScaleUpdate,
               child: Stack(
