@@ -578,7 +578,9 @@ class _CityScreenState extends State<CityScreen>
         // renderer is experimental and behind kUse3DCity; the Flame board is
         // the default fallback.
         Positioned.fill(
-          child: kUse3DCity ? const CityScene3D() : GameWidget(game: _game),
+          child: kUse3DCity
+              ? CityScene3D(buildings: _city.buildings)
+              : GameWidget(game: _game),
         ),
 
         // Floating chrome insets only the camera/Dynamic-Island side (from the

@@ -5,28 +5,33 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
+import '../models/city.dart';
+import 'city3d_layout.dart';
 import 'model_cache.dart';
 
-/// Standalone 3D city view (Stage 2): a warm, lit diorama with soft shadows,
-/// a ground plane and a few hardcoded buildings, driven by a fixed iso-style
-/// [PerspectiveCamera] the user can orbit, pinch-zoom and two-finger pan.
+/// 3D city view bound to the real city data (Stage 3): a warm, lit diorama
+/// with soft shadows and a ground plane, rendering the player's actual
+/// [buildings] — type → model, (gridX, gridY) → world position, level → scale.
 ///
-/// This is NOT wired to city data yet — it renders a fixed layout so the
-/// renderer and camera feel can be validated on real hardware. It's shown only
-/// when `kUse3DCity` is true; otherwise the Flame board renders.
+/// The same `watchCity` stream that feeds the Flame board feeds this widget;
+/// only the renderer differs. It's shown only when `kUse3DCity` is true.
+/// Interaction (tap/place/upgrade) is unchanged for now — that's Stage 4.
 class CityScene3D extends StatefulWidget {
-  const CityScene3D({super.key});
+  const CityScene3D({
+    super.key,
+    required this.buildings,
+    this.gridSize = 10,
+  });
+
+  /// The player's placed buildings, straight from the city model. A new list
+  /// instance on each stream update triggers reconciliation.
+  final List<PlacedBuilding> buildings;
+
+  /// Grid dimension, used to center the city on the origin.
+  final int gridSize;
 
   @override
   State<CityScene3D> createState() => _CityScene3DState();
-}
-
-/// A hardcoded building placement for Stage 2 (grid cell + type id).
-class _Placement {
-  const _Placement(this.x, this.z, this.typeId);
-  final double x;
-  final double z;
-  final String typeId;
 }
 
 class _CityScene3DState extends State<CityScene3D> {
@@ -36,45 +41,51 @@ class _CityScene3DState extends State<CityScene3D> {
   late final Future<void> _ready;
 
   // --- Orbit camera state -----------------------------------------------
-  // Yaw spins around the target, pitch raises/lowers the eye, radius is the
-  // distance. Defaults frame the little city at a cozy iso-ish angle.
   double _yaw = pi / 4; // 45° — classic iso feel
   double _pitch = 0.62; // ~35° above the ground
-  double _radius = 15;
+  double _radius = 17;
   final vm.Vector3 _target = vm.Vector3(0, 0.6, 0);
 
   static const double _minRadius = 5;
-  static const double _maxRadius = 28;
+  static const double _maxRadius = 30;
   static const double _minPitch = 0.12;
   static const double _maxPitch = 1.45;
 
-  // Captured at gesture start so pinch-zoom is relative to where it began.
-  double _gestureStartRadius = 15;
-
+  double _gestureStartRadius = 17;
   Size _viewSize = Size.zero;
 
-  // A handful of hardcoded buildings laid out on a small grid. Type ids all
-  // map to the placeholder model today (see city3d_config), but keeping
-  // distinct ids means swapping in per-type models later "just works".
-  static const List<_Placement> _layout = [
-    _Placement(-3, -3, 'house'),
-    _Placement(0, -3, 'shop'),
-    _Placement(3, -3, 'cafe'),
-    _Placement(-3, 0, 'tower'),
-    _Placement(3, 0, 'apartment'),
-    _Placement(-3, 3, 'school'),
-    _Placement(0, 3, 'bank'),
-    _Placement(3, 3, 'park'),
-  ];
+  // --- City reconciliation state ----------------------------------------
+  // cellKey → the node currently rendering that cell, and the spec it renders.
+  final Map<String, Node> _placed = {};
+  final Map<String, PlacedBuilding> _spec = {};
+  List<PlacedBuilding> _desired = const [];
+  int _targetGen = 0; // bumped whenever a new buildings list arrives
+  int _appliedGen = -1; // last generation fully reflected in the scene
+  bool _busy = false; // a reconcile pass is running
 
   @override
   void initState() {
     super.initState();
     _ready = _init();
+    _desired = widget.buildings;
+    _targetGen = 1;
+    _pump();
     // Continuous repaint keeps the 3D view live and smooth.
     _ticker = Ticker((_) {
       if (mounted) setState(() {});
     })..start();
+  }
+
+  @override
+  void didUpdateWidget(CityScene3D old) {
+    super.didUpdateWidget(old);
+    // The city model hands us a fresh list on every real update, so an identity
+    // check is enough to skip unrelated rebuilds (tray toggles, etc.).
+    if (!identical(old.buildings, widget.buildings)) {
+      _desired = widget.buildings;
+      _targetGen++;
+      _pump();
+    }
   }
 
   Future<void> _init() async {
@@ -123,13 +134,58 @@ class _CityScene3DState extends State<CityScene3D> {
     )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.1, 0));
     scene.add(ground);
 
-    // Warm up the shared colormap once, then place the hardcoded buildings.
     await _models.warmUp();
-    for (final p in _layout) {
-      final node = await _models.newBuilding(p.typeId);
-      node.localTransform = vm.Matrix4.translation(vm.Vector3(p.x, 0, p.z));
-      scene.add(node);
+  }
+
+  /// Serialized reconcile loop. Always drives the scene toward the latest
+  /// [_desired]; if a new list arrives while a pass is mid-flight (across an
+  /// await), the while-loop picks it up before exiting. Single-threaded Dart
+  /// guarantees no interleaving outside await points, so this can't drop an
+  /// update or run two passes at once.
+  Future<void> _pump() async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      await _ready;
+      while (_appliedGen != _targetGen) {
+        final gen = _targetGen;
+        await _applyTarget(_desired);
+        _appliedGen = gen;
+      }
+    } finally {
+      _busy = false;
     }
+  }
+
+  Future<void> _applyTarget(List<PlacedBuilding> target) async {
+    final diff = diffCity(_spec, target);
+
+    for (final key in diff.toRemove) {
+      final node = _placed.remove(key);
+      if (node != null) scene.remove(node);
+      _spec.remove(key);
+    }
+
+    for (final b in diff.toAdd) {
+      final node = await _models.newBuilding(b.typeId);
+      _transformFor(node, b);
+      if (!mounted) return; // widget went away mid-load
+      scene.add(node);
+      _placed[cellKey(b.gridX, b.gridY)] = node;
+      _spec[cellKey(b.gridX, b.gridY)] = b;
+    }
+
+    for (final b in diff.toUpdate) {
+      final node = _placed[cellKey(b.gridX, b.gridY)];
+      if (node != null) _transformFor(node, b);
+      _spec[cellKey(b.gridX, b.gridY)] = b;
+    }
+  }
+
+  void _transformFor(Node node, PlacedBuilding b) {
+    final pos = cellToWorld(b.gridX, b.gridY, gridSize: widget.gridSize);
+    final s = scaleForLevel(b.level);
+    node.localTransform = vm.Matrix4.translation(pos)..scaleByDouble(s, s, s, 1);
   }
 
   PerspectiveCamera _camera() {
@@ -154,14 +210,10 @@ class _CityScene3DState extends State<CityScene3D> {
   void _onScaleUpdate(ScaleUpdateDetails d) {
     setState(() {
       if (d.pointerCount >= 2) {
-        // Pinch-zoom: radius relative to the gesture's starting radius.
         _radius =
             (_gestureStartRadius / d.scale).clamp(_minRadius, _maxRadius);
-        // Two-finger pan: slide the target across the ground. Scale by radius
-        // so the world keeps pace with the fingers at any zoom level.
         _panTarget(d.focalPointDelta);
       } else {
-        // Orbit. Invert so the world follows the finger naturally.
         _yaw -= d.focalPointDelta.dx * 0.01;
         _pitch =
             (_pitch + d.focalPointDelta.dy * 0.01).clamp(_minPitch, _maxPitch);
@@ -169,15 +221,13 @@ class _CityScene3DState extends State<CityScene3D> {
     });
   }
 
-  /// Moves [_target] along the ground plane by a screen-space [delta], using
-  /// the camera's yaw to map screen X/Y to world right/forward.
+  /// Slides [_target] along the ground by a screen-space [delta], mapped to
+  /// world right/forward via the current yaw, scaled by radius so the world
+  /// keeps pace with the fingers at any zoom level.
   void _panTarget(Offset delta) {
-    final perPixel = _radius * 0.0016; // world units per screen pixel
-    // Horizontal basis vectors on the ground for the current yaw.
+    final perPixel = _radius * 0.0016;
     final right = vm.Vector3(cos(_yaw), 0, -sin(_yaw));
     final forward = vm.Vector3(sin(_yaw), 0, cos(_yaw));
-    // Drag right → world slides right (move target left); drag down → world
-    // slides toward viewer (move target away).
     _target
       ..add(right * (-delta.dx * perPixel))
       ..add(forward * (delta.dy * perPixel));
