@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import '../game/building_catalog.dart';
 import '../game/city_game.dart';
 import '../game/economy_config.dart';
+import '../game3d/city3d_config.dart';
+import '../game3d/city_scene_3d.dart';
 import '../models/city.dart';
 import '../models/quest_instance.dart';
 import '../services/city_service.dart';
@@ -572,8 +574,12 @@ class _CityScreenState extends State<CityScreen>
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Full-bleed city — draws under the notch and screen edges.
-        Positioned.fill(child: GameWidget(game: _game)),
+        // Full-bleed city — draws under the notch and screen edges. The 3D
+        // renderer is experimental and behind kUse3DCity; the Flame board is
+        // the default fallback.
+        Positioned.fill(
+          child: kUse3DCity ? const CityScene3D() : GameWidget(game: _game),
+        ),
 
         // Floating chrome insets only the camera/Dynamic-Island side (from the
         // native orientation report) and hugs the opposite, clear edge — so no
