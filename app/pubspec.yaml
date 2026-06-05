@@ -42,6 +42,9 @@ dependencies:
   firebase_storage: ^12.3.0
   image_picker: ^1.1.2
   flame: ^1.37.0
+  # Experimental 3D city renderer (behind kUse3DCity). Flame stays the default.
+  flutter_scene: ^0.15.0
+  vector_math: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +85,9 @@ flutter:
   # falls back to canvas-drawn art for any that are missing.
   assets:
     - assets/city/
+    # 3D city placeholder models + shared colormap (behind kUse3DCity).
+    - assets/city3d/models/
+    - assets/city3d/textures/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
