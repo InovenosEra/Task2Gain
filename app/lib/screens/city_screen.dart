@@ -353,9 +353,10 @@ class _CityScreenState extends State<CityScreen>
     );
   }
 
-  void _openScreen(String title, Widget child) {
+  void _openScreen(String title, Widget child, {bool fill = false}) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => _SubScreen(title: title, child: child)),
+      MaterialPageRoute(
+          builder: (_) => _SubScreen(title: title, fill: fill, child: child)),
     );
   }
 
@@ -535,7 +536,8 @@ class _CityScreenState extends State<CityScreen>
               _sheetItem(ctx, Icons.person_rounded, 'הפרופיל שלי', () {
                 Navigator.of(ctx).pop();
                 _openScreen('פרופיל',
-                    ProfileTab(data: widget.data, onSignOut: widget.onSignOut));
+                    ProfileTab(data: widget.data, onSignOut: widget.onSignOut),
+                    fill: true);
               }),
               if (_isAdmin)
                 _sheetItem(ctx, Icons.tune_rounded, 'ניהול המשפחה', () {
@@ -931,7 +933,7 @@ class _CityScreenState extends State<CityScreen>
             uid: widget.data.uid,
             familyId: widget.data.familyId,
             onEarn: () =>
-                _openScreen('משימות', HomeTab(data: widget.data)),
+                _openScreen('משימות', HomeTab(data: widget.data), fill: true),
             onCashOut: () => showCashOutSheet(context,
                 uid: widget.data.uid, familyId: widget.data.familyId),
           ),
@@ -963,10 +965,11 @@ class _CityScreenState extends State<CityScreen>
             child: _ActionRail(
               uid: widget.data.uid,
               onTasks: () =>
-                  _openScreen('משימות', HomeTab(data: widget.data)),
-              onShop: () => _openScreen('חנות', ShopTab(data: widget.data)),
+                  _openScreen('משימות', HomeTab(data: widget.data), fill: true),
+              onShop: () =>
+                  _openScreen('חנות', ShopTab(data: widget.data), fill: true),
               onFamily: () =>
-                  _openScreen('משפחה', FamilyTab(data: widget.data)),
+                  _openScreen('משפחה', FamilyTab(data: widget.data), fill: true),
             ),
           ),
         ),
@@ -1852,9 +1855,14 @@ class _TrayItem extends StatelessWidget {
 // ----------------------------------------------------------------------------
 
 class _SubScreen extends StatelessWidget {
-  const _SubScreen({required this.title, required this.child});
+  const _SubScreen({required this.title, required this.child, this.fill = false});
   final String title;
   final Widget child;
+
+  /// When true, the child fills the full landscape width (used by the
+  /// redesigned two-pane section screens). When false, legacy portrait
+  /// screens stay centred in a phone-width column.
+  final bool fill;
 
   @override
   Widget build(BuildContext context) {
@@ -1889,16 +1897,18 @@ class _SubScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                // The tab screens were designed portrait. In the landscape
-                // frame, centre them in a phone-width column so they read as
-                // intentional instead of stretching edge to edge.
+                // Redesigned section screens (fill: true) own a full-width
+                // two-pane landscape layout. Legacy portrait screens stay
+                // centred in a phone-width column so they read as intentional.
                 Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 480),
-                      child: child,
-                    ),
-                  ),
+                  child: fill
+                      ? child
+                      : Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 480),
+                            child: child,
+                          ),
+                        ),
                 ),
               ],
             ),

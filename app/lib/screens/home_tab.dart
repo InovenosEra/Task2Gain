@@ -4,11 +4,9 @@ import 'package:flutter/material.dart';
 import '../models/quest.dart';
 import '../services/quest_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/animated_counter.dart';
 import '../widgets/avatar_picker.dart';
-import '../widgets/gradient_text.dart';
 import '../widgets/glow_card.dart';
-import '../widgets/daily_goal_ring.dart';
+import '../widgets/landscape_body.dart';
 import '../widgets/page_routes.dart';
 import '../widgets/scale_tap.dart';
 import 'convert_points_screen.dart';
@@ -26,199 +24,121 @@ class HomeTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final firestore = FirebaseFirestore.instance;
     final questService = QuestService();
-    return ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.zero,
-        children: [
-          _Header(data: data),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _WalletHero(uid: data.uid, firestore: firestore),
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PaneTitle(
+          title: 'משימות פתוחות',
+          trailing: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppPalette.green,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text('זמינות', style: bodyFont(size: 12, color: Colors.white60)),
+            ],
           ),
-          const SizedBox(height: 14),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _QuickAction(
-                    emoji: '💱',
-                    label: 'המר נקודות',
-                    tone: AppPalette.green,
-                    onTap: () => context.pushFadeUp(
-                      (_) => ConvertPointsScreen(
-                        uid: data.uid,
-                        familyId: data.familyId,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _QuickAction(
-                    emoji: '💸',
-                    label: 'CashCash',
-                    tone: AppPalette.sky,
-                    onTap: () => context.pushFadeUp(
-                      (_) => TransferCashCashScreen(
-                        uid: data.uid,
-                        familyId: data.familyId,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 22),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: [
-                Text(
-                  'משימות פתוחות',
-                  style: displayFont(size: 22, weight: FontWeight.w800),
-                ),
-                const Spacer(),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppPalette.green,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'זמינות',
-                  style: bodyFont(
-                      size: 12, color: Colors.white60),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          StreamBuilder<List<Quest>>(
+        ),
+        Expanded(
+          child: StreamBuilder<List<Quest>>(
             stream: questService.watchFamilyQuests(data.familyId),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(
-                      child: CircularProgressIndicator(
-                          color: AppPalette.gold)),
-                );
+                return const Center(
+                    child: CircularProgressIndicator(color: AppPalette.gold));
               }
               final quests = snap.data ?? const [];
               if (quests.isEmpty) {
                 return const _EmptyQuests();
               }
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                child: Column(
-                  children: [
-                    for (var i = 0; i < quests.length; i++) ...[
-                      _QuestCard(
-                        quest: quests[i],
-                        onTap: () => context.pushFadeUp(
-                          (_) => QuestDetailScreen(
-                            quest: quests[i],
-                            kidUid: data.uid,
-                          ),
-                        ),
-                      ),
-                      if (i < quests.length - 1)
-                        const SizedBox(height: 12),
-                    ],
-                  ],
+              return GridView.builder(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(2, 0, 2, 6),
+                gridDelegate:
+                    const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 300,
+                  mainAxisExtent: 96,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: quests.length,
+                itemBuilder: (context, i) => _QuestCard(
+                  quest: quests[i],
+                  onTap: () => context.pushFadeUp(
+                    (_) => QuestDetailScreen(
+                      quest: quests[i],
+                      kidUid: data.uid,
+                    ),
+                  ),
                 ),
               );
             },
           ),
-        ],
-      );
-  }
-}
+        ),
+      ],
+    );
 
-class _Header extends StatelessWidget {
-  const _Header({required this.data});
-  final HomeData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
-      child: Row(
-        children: [
-          AvatarBubble(emoji: data.avatar, size: 50),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'היי, ${data.displayName}!',
-                  style: displayFont(size: 22, weight: FontWeight.w900),
-                ),
-                Text(
-                  data.familyName,
-                  style: bodyFont(
-                      size: 13,
-                      color: AppPalette.gold,
-                      weight: FontWeight.w700),
-                ),
-              ],
-            ),
-          ),
-        ],
+    return LandscapeSection(
+      strip: _WalletStrip(
+        data: data,
+        firestore: firestore,
+        onConvert: () => context.pushFadeUp(
+          (_) => ConvertPointsScreen(uid: data.uid, familyId: data.familyId),
+        ),
+        onTransfer: () => context.pushFadeUp(
+          (_) => TransferCashCashScreen(uid: data.uid, familyId: data.familyId),
+        ),
       ),
+      content: content,
     );
   }
 }
 
-class _WalletHero extends StatelessWidget {
-  const _WalletHero({required this.uid, required this.firestore});
-  final String uid;
+/// Compact full-width wallet bar for the top of the Tasks screen: a small
+/// avatar + inline balance chips (points / money / tokens / streak) on the
+/// right, the two quick actions on the left.
+class _WalletStrip extends StatelessWidget {
+  const _WalletStrip({
+    required this.data,
+    required this.firestore,
+    required this.onConvert,
+    required this.onTransfer,
+  });
+  final HomeData data;
   final FirebaseFirestore firestore;
+  final VoidCallback onConvert;
+  final VoidCallback onTransfer;
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: firestore.collection('users').doc(uid).snapshots(),
+      stream: firestore.collection('users').doc(data.uid).snapshots(),
       builder: (context, userSnap) {
         return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          stream: firestore.collection('wallets').doc(uid).snapshots(),
+          stream: firestore.collection('wallets').doc(data.uid).snapshots(),
           builder: (context, walletSnap) {
             final user = userSnap.data?.data() ?? const {};
             final wallet = walletSnap.data?.data() ?? const {};
             final points = (wallet['points'] as num?)?.toInt() ?? 0;
-            final money =
-                (wallet['moneyILS'] as num?)?.toDouble() ?? 0.0;
+            final money = (wallet['moneyILS'] as num?)?.toDouble() ?? 0.0;
             final tokens = (wallet['tokens'] as num?)?.toInt() ?? 0;
-            final dailyGoal =
-                (user['dailyGoal'] as num?)?.toInt() ?? 50;
-            final now = DateTime.now().toUtc();
-            final todayKey =
-                '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-            final earnedMap = (user['earnedToday'] as Map?)
-                    ?.cast<String, dynamic>() ??
-                const {};
-            final earnedToday = (earnedMap['date'] as String?) == todayKey
-                ? (earnedMap['points'] as num?)?.toInt() ?? 0
-                : 0;
-            final streakMap = (user['streak'] as Map?)
-                    ?.cast<String, dynamic>() ??
-                const {};
-            final streakDays =
-                (streakMap['current'] as num?)?.toInt() ?? 0;
+            final streakMap =
+                (user['streak'] as Map?)?.cast<String, dynamic>() ?? const {};
+            final streak = (streakMap['current'] as num?)?.toInt() ?? 0;
 
             return GlowCard(
               glowColor: AppPalette.gold,
-              glowOpacity: 0.32,
-              glowRadius: 32,
-              borderColor: AppPalette.gold.withValues(alpha: 0.3),
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+              glowOpacity: 0.18,
+              glowRadius: 22,
+              borderColor: AppPalette.gold.withValues(alpha: 0.22),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               gradient: const LinearGradient(
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
@@ -228,90 +148,41 @@ class _WalletHero extends StatelessWidget {
                   Color(0xFF3F1A55),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Row(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'בארנק שלי',
-                              style: bodyFont(
-                                size: 12,
-                                color: Colors.white60,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            AnimatedIntCounter(
-                              value: points,
-                              style: displayFont(
-                                  size: 52,
-                                  weight: FontWeight.w900,
-                                  height: 1.0),
-                              builder: (context, text) => GradientText(
-                                text,
-                                style: displayFont(
-                                  size: 52,
-                                  weight: FontWeight.w900,
-                                  height: 1.0,
-                                ),
-                                colors: AppPalette.heroGrad,
-                              ),
-                            ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.only(top: 2),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    'נקודות ⭐',
-                                    style: bodyFont(
-                                      size: 13,
-                                      color: Colors.white70,
-                                      weight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '·',
-                                    style: bodyFont(
-                                        color: Colors.white24),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '₪${money.toStringAsFixed(2)}',
-                                    style: bodyFont(
-                                      size: 13,
-                                      color: AppPalette.gold,
-                                      weight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      DailyGoalRing(
-                          earnedToday: earnedToday, goal: dailyGoal),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _StreakFlame(days: streakDays),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _TokensChip(tokens: tokens),
-                      ),
-                    ],
-                  ),
+                  AvatarBubble(emoji: data.avatar, size: 40),
+                  const SizedBox(width: 12),
+                  _StatChip(
+                      emoji: '⭐',
+                      value: '$points',
+                      tone: AppPalette.gold),
+                  const SizedBox(width: 8),
+                  _StatChip(
+                      emoji: '💰',
+                      value: '₪${money.toStringAsFixed(2)}',
+                      tone: AppPalette.green),
+                  const SizedBox(width: 8),
+                  _StatChip(
+                      emoji: '🎟️',
+                      value: '$tokens',
+                      tone: AppPalette.violet),
+                  const SizedBox(width: 8),
+                  _StatChip(
+                      emoji: streak >= 3 ? '🔥' : '✨',
+                      value: '$streak',
+                      tone: AppPalette.pink),
+                  const Spacer(),
+                  _StripAction(
+                      emoji: '💱',
+                      label: 'המר נקודות',
+                      tone: AppPalette.green,
+                      onTap: onConvert),
+                  const SizedBox(width: 8),
+                  _StripAction(
+                      emoji: '💸',
+                      label: 'CashCash',
+                      tone: AppPalette.sky,
+                      onTap: onTransfer),
                 ],
               ),
             );
@@ -322,87 +193,42 @@ class _WalletHero extends StatelessWidget {
   }
 }
 
-class _TokensChip extends StatelessWidget {
-  const _TokensChip({required this.tokens});
-  final int tokens;
+/// Inline balance chip: emoji + value on a tinted pill.
+class _StatChip extends StatelessWidget {
+  const _StatChip(
+      {required this.emoji, required this.value, required this.tone});
+  final String emoji;
+  final String value;
+  final Color tone;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: AppPalette.violet.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppPalette.violet.withValues(alpha: 0.4)),
+        color: tone.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: tone.withValues(alpha: 0.35)),
       ),
       child: Row(
-        children: [
-          const Text('🎟️', style: TextStyle(fontSize: 20)),
-          const SizedBox(width: 8),
-          Text('$tokens אסימונים',
-              style: displayFont(size: 15, weight: FontWeight.w900)),
-          const Spacer(),
-          Text('למכונת הפרסים →',
-              style: bodyFont(size: 11, color: Colors.white54)),
-        ],
-      ),
-    );
-  }
-}
-
-class _StreakFlame extends StatelessWidget {
-  const _StreakFlame({required this.days});
-  final int days;
-  @override
-  Widget build(BuildContext context) {
-    final hot = days >= 3;
-    return Container(
-      width: 56,
-      height: 56,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: hot
-            ? AppPalette.pink.withValues(alpha: 0.18)
-            : Colors.white.withValues(alpha: 0.06),
-        border: Border.all(
-          color: hot
-              ? AppPalette.pink.withValues(alpha: 0.5)
-              : Colors.white.withValues(alpha: 0.1),
-        ),
-        boxShadow: hot
-            ? [
-                BoxShadow(
-                  color: AppPalette.pink.withValues(alpha: 0.4),
-                  blurRadius: 14,
-                )
-              ]
-            : null,
-      ),
-      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(hot ? '🔥' : '✨', style: const TextStyle(fontSize: 20)),
-          Text(
-            '$days',
-            style: displayFont(
-              size: 13,
-              weight: FontWeight.w900,
-              height: 1.0,
-            ),
-          ),
+          Text(emoji, style: const TextStyle(fontSize: 15)),
+          const SizedBox(width: 6),
+          Text(value, style: displayFont(size: 15, weight: FontWeight.w900)),
         ],
       ),
     );
   }
 }
 
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
-    required this.emoji,
-    required this.label,
-    required this.tone,
-    required this.onTap,
-  });
+/// Compact action button used in the wallet strip.
+class _StripAction extends StatelessWidget {
+  const _StripAction(
+      {required this.emoji,
+      required this.label,
+      required this.tone,
+      required this.onTap});
   final String emoji;
   final String label;
   final Color tone;
@@ -413,28 +239,25 @@ class _QuickAction extends StatelessWidget {
     return ScaleTap(
       onTap: onTap,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: tone.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: tone.withValues(alpha: 0.4)),
+          color: tone.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: tone.withValues(alpha: 0.45)),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: displayFont(size: 14, weight: FontWeight.w800),
-            ),
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 7),
+            Text(label, style: displayFont(size: 13, weight: FontWeight.w800)),
           ],
         ),
       ),
     );
   }
 }
+
 
 class _QuestCard extends StatelessWidget {
   const _QuestCard({required this.quest, required this.onTap});
@@ -500,6 +323,8 @@ class _QuestCard extends StatelessWidget {
                   children: [
                     Text(
                       quest.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: displayFont(
                           size: 16, weight: FontWeight.w800),
                     ),
@@ -547,11 +372,11 @@ class _EmptyQuests extends StatelessWidget {
   const _EmptyQuests();
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(40, 32, 40, 80),
+    return Center(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('🌟', style: TextStyle(fontSize: 72)),
+          const Text('🌟', style: TextStyle(fontSize: 64)),
           const SizedBox(height: 14),
           Text(
             'אין משימות כרגע',
