@@ -93,7 +93,8 @@ class _CityScene3DState extends State<CityScene3D> {
   int _treeGen = 0; // guards async tree scatter against stale rebuilds
   // Street-top textures (colour baked in). Loaded once in _init.
   Object? _texGrass, _texSoil, _texStone;
-  final List<Node> _cloudNodes = []; // static hidden-chunk cloud cover
+  final List<Node> _cragNodes = []; // rocky crag frontier + mist (async)
+  int _cragGen = 0;
 
   // --- City reconciliation state ----------------------------------------
   // cellKey → the node currently rendering that cell, and the spec it renders.
@@ -212,15 +213,10 @@ class _CityScene3DState extends State<CityScene3D> {
     _texSoil = await _models.texture(kCity3DTexSoil);
     _texStone = await _models.texture(kCity3DTexStone);
 
-    // The revealed plot (grass + wall), the cloud frontier, trees, buildings.
+    // The revealed plot (grass + wall), trees, crag frontier, buildings.
     _buildPlot();
 
     await _models.warmUp();
-  }
-
-  void _cloud(Node n) {
-    scene.add(n);
-    _cloudNodes.add(n);
   }
 
   /// Lit material (PlaneGeometry/SphereGeometry only — they have normals)
@@ -273,9 +269,55 @@ class _CityScene3DState extends State<CityScene3D> {
     )..localTransform = vm.Matrix4.translation(vm.Vector3(0, 0.0, 0)));
 
     _buildWall(half, span);
-    _buildCloudFrontier(half, span);
     _scatterTrees();
+    _scatterCrags(half);
     _updateBuildHighlights();
+  }
+
+  /// The frontier beyond the wall: a ring of rocky/icy CRAGS (MegaCity mountain
+  /// models, mixed peak + rocks, varied scale/rotation, dipped below the plot so
+  /// they rise around it) with soft white drifting MIST nestled among them.
+  /// Async (GLB loads); a generation token lets a newer rebuild win.
+  Future<void> _scatterCrags(double half) async {
+    for (final n in _cragNodes) {
+      scene.remove(n);
+    }
+    _cragNodes.clear();
+    final gen = ++_cragGen;
+    final models = kCity3DCragModels;
+    if (models.isEmpty) return;
+    const count = 13;
+    final ringR = half + 7.0;
+    for (var i = 0; i < count; i++) {
+      final a = i / count * 2 * pi;
+      final r = ringR + ((i * 7) % 5) - 2; // jitter the ring
+      final x = cos(a) * r, z = sin(a) * r;
+      // mostly tall peaks, some lower rocks for variety
+      final mi = (i % 3 == 0) ? 0 : (i % 3 == 1 ? 1 : 2);
+      final fp = 11.0 + (i % 4) * 2.5; // 11..18 footprint
+      final node = await _models.prop(models[mi], footprint: fp);
+      if (!mounted || gen != _cragGen) return;
+      node.localTransform = (vm.Matrix4.translation(vm.Vector3(x, -1.2, z))
+        ..rotateY(a + i * 1.3)); // face inward-ish, varied
+      scene.add(node);
+      _cragNodes.add(node);
+    }
+    // Soft white drifting mist among/over the crags (bright unlit puffs).
+    const mistLayers = [(2.4, 4.6), (5.0, 3.8)];
+    for (var i = 0; i < count; i++) {
+      final a = (i + 0.5) / count * 2 * pi;
+      final r = ringR - 1.5;
+      final x = cos(a) * r, z = sin(a) * r;
+      for (final (y, rad) in mistLayers) {
+        final n = Node(
+          mesh: Mesh(SphereGeometry(radius: rad, segments: 12, rings: 7),
+              _unlit(kCity3DMistColor)),
+        )..localTransform = (vm.Matrix4.translation(vm.Vector3(x, y, z))
+          ..scaleByDouble(1.0, 0.7, 1.0, 1));
+        scene.add(n);
+        _cragNodes.add(n);
+      }
+    }
   }
 
   /// A low-poly stone wall ringing the plot, built from LIT PlaneGeometry faces
@@ -288,58 +330,34 @@ class _CityScene3DState extends State<CityScene3D> {
     const cy = h / 2 - 0.1; // face center (dips slightly under the grass)
     const top = h - 0.1; // wall top
     final len = span + 0.6; // overlap the corners
+    // Split each side into ~square panels so the brick texture tiles at a
+    // natural scale (UV 0-1 per panel) instead of stretching across the side.
+    final nP = (len / 2.4).ceil();
+    final pw = len / nP;
     Node face(PlaneGeometry g) =>
         Node(mesh: Mesh(g, _mat(_texStone, rough: 0.9, doubleSided: true)));
     Node cap(PlaneGeometry g) =>
         Node(mesh: Mesh(g, _mat(_texStone, rough: 0.9)));
 
     for (final z in [half, -half]) {
-      _addPlot(face(PlaneGeometry(width: len, depth: h))
-        ..localTransform =
-            (vm.Matrix4.translation(vm.Vector3(0, cy, z))..rotateX(pi / 2)));
+      for (var i = 0; i < nP; i++) {
+        final px = -len / 2 + pw * (i + 0.5);
+        _addPlot(face(PlaneGeometry(width: pw * 1.01, depth: h))
+          ..localTransform =
+              (vm.Matrix4.translation(vm.Vector3(px, cy, z))..rotateX(pi / 2)));
+      }
       _addPlot(cap(PlaneGeometry(width: len, depth: 0.7))
         ..localTransform = vm.Matrix4.translation(vm.Vector3(0, top, z)));
     }
     for (final x in [half, -half]) {
-      _addPlot(face(PlaneGeometry(width: h, depth: len))
-        ..localTransform =
-            (vm.Matrix4.translation(vm.Vector3(x, cy, 0))..rotateZ(pi / 2)));
+      for (var i = 0; i < nP; i++) {
+        final pz = -len / 2 + pw * (i + 0.5);
+        _addPlot(face(PlaneGeometry(width: h, depth: pw * 1.01))
+          ..localTransform =
+              (vm.Matrix4.translation(vm.Vector3(x, cy, pz))..rotateZ(pi / 2)));
+      }
       _addPlot(cap(PlaneGeometry(width: 0.7, depth: len))
         ..localTransform = vm.Matrix4.translation(vm.Vector3(x, top, 0)));
-    }
-  }
-
-  /// The cloud frontier: instead of cloud blobs on the ground, a ring of soft
-  /// fluffy WHITE clouds just outside the wall that RISE well above it, hiding
-  /// everything beyond. Lit puffs (volume + soft shadow); stacked vertically
-  /// into a billowing bank. (The logical chunk world model is untouched — this
-  /// is visual-only.)
-  void _buildCloudFrontier(double half, double span) {
-    for (final n in _cloudNodes) {
-      scene.remove(n);
-    }
-    _cloudNodes.clear();
-    // Ring sits just OUTSIDE the wall so the wall stays visible in front and
-    // the clouds rise beyond it (inner edge ≈ wall outer face, no cream gap).
-    final outer = half + 5.5;
-    final n = (span / 8).ceil() + 1;
-    const layers = [(1.2, 5.0), (5.6, 4.5)];
-    void column(double x, double z) {
-      for (final (y, r) in layers) {
-        _cloud(Node(
-          mesh: Mesh(SphereGeometry(radius: r, segments: 12, rings: 7),
-              _unlit(kCity3DCloudColor)),
-        )..localTransform = (vm.Matrix4.translation(vm.Vector3(x, y, z))
-          ..scaleByDouble(1.0, 0.85, 1.0, 1)));
-      }
-    }
-
-    for (var i = 0; i <= n; i++) {
-      final t = -outer + (2 * outer) * (i / n); // -outer..+outer along a side
-      column(t, outer); // north edge
-      column(t, -outer); // south edge
-      column(outer, t); // east edge
-      column(-outer, t); // west edge
     }
   }
 
@@ -533,7 +551,8 @@ class _CityScene3DState extends State<CityScene3D> {
       position: eye,
       target: _target.clone(),
       fovNear: 0.5,
-      fovFar: 160,
+      fovFar: 220, // contains the crag frontier + good depth precision
+
     );
   }
 
@@ -610,14 +629,14 @@ class _CityScene3DState extends State<CityScene3D> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Warm gradient sky behind the scene (the renderer leaves
-                  // non-geometry areas transparent, so this shows through).
+                  // Soft hazy sky behind the crag frontier (pale blue → misty
+                  // white), so the rocky peaks read against a gentle sky.
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0xFFFFE9C9), Color(0xFFF3C39A)],
+                        colors: [Color(0xFFAFC9E0), Color(0xFFE9EFF3)],
                       ),
                     ),
                   ),

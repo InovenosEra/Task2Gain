@@ -66,10 +66,17 @@ const String kCity3DTexAsphalt = 'assets/city3d/textures/plot_asphalt.png';
 const String kCity3DTexSidewalk = 'assets/city3d/textures/plot_sidewalk.png';
 const String kCity3DTexSoil = 'assets/city3d/textures/plot_soil.png';
 
-/// Cloud colour — bright soft white via UNLIT material, so puffs stay delicate
-/// and bright with NO grey shadowed undersides (lit clouds came out grey/heavy).
-/// Overlapping rising puffs read as a soft dreamy cloud bank.
-const List<double> kCity3DCloudColor = [0.97, 0.97, 0.99, 1.0];
+/// Rocky/icy CRAG frontier beyond the wall: MegaCity mountain models ringed
+/// around the plot (mix of a tall peak + lower rocks), with soft white drifting
+/// mist nestled among them — like the reference's misty mountain frontier.
+const List<String> kCity3DCragModels = [
+  'assets/city3d/models/mountain_001.glb', // tall peak
+  'assets/city3d/models/mountain_003.glb', // medium rock
+  'assets/city3d/models/mountain_005.glb', // low rock
+];
+
+/// Soft white drifting mist over the crags (UNLIT — stays bright, no grey).
+const List<double> kCity3DMistColor = [0.95, 0.96, 0.98, 1.0];
 
 /// Lot/sidewalk widths within a cell ([kCell3DSpacing] = 2.4). The gap left by
 /// the sidewalk forms the street between blocks.
