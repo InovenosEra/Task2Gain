@@ -92,7 +92,7 @@ class _CityScene3DState extends State<CityScene3D> {
   final Map<String, Node> _highlights = {}; // build-mode empty-cell markers
   int _treeGen = 0; // guards async tree scatter against stale rebuilds
   // Street-top textures (colour baked in). Loaded once in _init.
-  Object? _texGrass, _texAsphalt, _texSidewalk;
+  Object? _texGrass, _texAsphalt, _texSidewalk, _texSoil;
 
   // --- City reconciliation state ----------------------------------------
   // cellKey → the node currently rendering that cell, and the spec it renders.
@@ -210,6 +210,7 @@ class _CityScene3DState extends State<CityScene3D> {
     _texGrass = await _models.texture(kCity3DTexGrass);
     _texAsphalt = await _models.texture(kCity3DTexAsphalt);
     _texSidewalk = await _models.texture(kCity3DTexSidewalk);
+    _texSoil = await _models.texture(kCity3DTexSoil);
 
     // The buildable plot: a raised island platform topped with a soft-green
     // checkerboard (or grid lines), sized to the current plot.
@@ -250,13 +251,13 @@ class _CityScene3DState extends State<CityScene3D> {
     final half = plotHalfExtentWorld(_plotSize);
     final span = half * 2;
 
-    // Raised island base (UNLIT — CuboidGeometry has no normals, so a lit
-    // material would wash out; unlit renders the soil colour directly). A
-    // single block, its top well below the street so nothing z-fights.
+    // Flat lit soil ground (PlaneGeometry → has normals; replaces the
+    // no-normals cuboid whose hard silhouette fringed at grazing angles). A
+    // soil apron around the streets reads as the plot without raised sides.
     _addPlot(Node(
-      mesh: Mesh(CuboidGeometry(vm.Vector3(span + 0.5, 0.9, span + 0.5)),
-          _unlit(kCity3DSoilColor)),
-    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.6, 0)));
+      mesh: Mesh(PlaneGeometry(width: span + 1.4, depth: span + 1.4),
+          _mat(_texSoil, rough: 0.95)),
+    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.12, 0)));
 
     // Three stacked surfaces — street < sidewalk < grass — spaced into real
     // curb heights so they never z-fight at grazing angles. Asphalt is inset so
