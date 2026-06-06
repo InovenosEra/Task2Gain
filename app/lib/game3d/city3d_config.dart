@@ -55,16 +55,27 @@ int plotSizeForLevel(int cityLevel) =>
 
 // --- Plot look -------------------------------------------------------------
 
-/// Grid-marking style on the plot top. true = soft two-tone checkerboard
-/// (per-cell shading + grid in one); false = single green top with thin lines.
-const bool kCity3DCheckerboard = true;
+// --- Street-organized plot top ---------------------------------------------
+// Streets run along block boundaries; each cell is a grass lot (with a sidewalk
+// curb) where a building sits. Textures (colour baked in) are used because
+// baseColorFactor is unreliable on procedural PBR; they're LIT PlaneGeometry
+// (CuboidGeometry has no normals) and baked dark so the strong key light lands
+// on the intended tone, not blown white.
+const String kCity3DTexGrass = 'assets/city3d/textures/plot_grass.png';
+const String kCity3DTexAsphalt = 'assets/city3d/textures/plot_asphalt.png';
+const String kCity3DTexSidewalk = 'assets/city3d/textures/plot_sidewalk.png';
 
-/// Grass textures for the LIT tile tops (PlaneGeometry, which has normals —
-/// CuboidGeometry has none, so PBR can't shade it). Colour is baked dark in the
-/// texture so the strong key light lands on a pleasant grass green, not a blown
-/// white. Two tones for the checkerboard variation.
-const String kCity3DTexGrassA = 'assets/city3d/textures/plot_grass_a.png';
-const String kCity3DTexGrassB = 'assets/city3d/textures/plot_grass_b.png';
+/// Lot/sidewalk widths within a cell ([kCell3DSpacing] = 2.4). The gap left by
+/// the sidewalk forms the street between blocks.
+const double kCity3DLotSize = 1.74; // grass footprint
+const double kCity3DSidewalkSize = 2.04; // curb ring around the grass
+
+/// Low-poly trees scattered sparsely along streets for life. Embedded textures.
+const List<String> kCity3DTreeModels = [
+  'assets/city3d/models/tree_016.glb',
+  'assets/city3d/models/tree_017.glb',
+];
+const double kCity3DTreeFootprint = 0.95;
 
 /// UNLIT island-base + highlight colours (baseColorFactor works on UnlitMaterial,
 /// which renders the colour directly — no lighting, so no normals needed and no

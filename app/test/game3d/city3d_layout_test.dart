@@ -88,6 +88,23 @@ void main() {
     test('plotHalfExtentWorld grows with plot size', () {
       expect(plotHalfExtentWorld(8), greaterThan(plotHalfExtentWorld(4)));
     });
+
+    test('treeSpots are sparse, in-plot, deterministic', () {
+      final a = treeSpots(10);
+      final b = treeSpots(10);
+      expect(a.map((s) => (s.i, s.j, s.model)),
+          b.map((s) => (s.i, s.j, s.model))); // deterministic
+      final (lo, hi) = plotRange(10);
+      for (final s in a) {
+        expect(s.i, inInclusiveRange(lo, hi - 1));
+        expect(s.j, inInclusiveRange(lo, hi - 1));
+        expect(s.model, inInclusiveRange(0, 1));
+      }
+      // sparse: well under the number of interior intersections (81 for P=10)
+      expect(a.length, lessThan(40));
+      // a bigger plot yields at least as many spots
+      expect(treeSpots(10).length, greaterThanOrEqualTo(treeSpots(4).length));
+    });
   });
 
   group('rayGroundHit', () {

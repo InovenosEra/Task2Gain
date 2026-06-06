@@ -87,10 +87,12 @@ class _CityScene3DState extends State<CityScene3D> {
 
   // --- Plot state (the buildable island) --------------------------------
   int _plotSize = kCity3DBasePlot;
-  final List<Node> _plotNodes = []; // platform + tiles + grid lines
+  final List<Node> _plotNodes = []; // base + asphalt + lots + sidewalks
+  final List<Node> _treeNodes = []; // scattered street trees
   final Map<String, Node> _highlights = {}; // build-mode empty-cell markers
-  // Grass textures for the lit tile tops. Loaded once in _init.
-  Object? _texGrassA, _texGrassB;
+  int _treeGen = 0; // guards async tree scatter against stale rebuilds
+  // Street-top textures (colour baked in). Loaded once in _init.
+  Object? _texGrass, _texAsphalt, _texSidewalk;
 
   // --- City reconciliation state ----------------------------------------
   // cellKey → the node currently rendering that cell, and the spec it renders.
@@ -204,9 +206,10 @@ class _CityScene3DState extends State<CityScene3D> {
       ..radius = 0.85
       ..smoothness = 0.6;
 
-    // Load the lit-tile grass textures, then build the plot.
-    _texGrassA = await _models.texture(kCity3DTexGrassA);
-    _texGrassB = await _models.texture(kCity3DTexGrassB);
+    // Load the street-top textures, then build the plot.
+    _texGrass = await _models.texture(kCity3DTexGrass);
+    _texAsphalt = await _models.texture(kCity3DTexAsphalt);
+    _texSidewalk = await _models.texture(kCity3DTexSidewalk);
 
     // The buildable plot: a raised island platform topped with a soft-green
     // checkerboard (or grid lines), sized to the current plot.
@@ -234,9 +237,10 @@ class _CityScene3DState extends State<CityScene3D> {
     _plotNodes.add(n);
   }
 
-  /// (Re)builds the plot: a layered island base + a soft-green top (checkerboard
-  /// tiles, or a single top with grid lines), sized to [_plotSize] and centered
-  /// on the grid origin. Buildings sit on the tile tops at y=0.
+  /// (Re)builds the plot as a street-organized city block: a layered island
+  /// base, one asphalt street layer, and a sidewalk + grass lot per cell (the
+  /// gaps between lots form the streets). Sized to [_plotSize], centered on the
+  /// grid origin. Buildings sit on the grass lots at y=0. Trees scatter after.
   void _buildPlot() {
     for (final n in _plotNodes) {
       scene.remove(n);
@@ -246,54 +250,67 @@ class _CityScene3DState extends State<CityScene3D> {
     final half = plotHalfExtentWorld(_plotSize);
     final span = half * 2;
 
-    // Layered island base: a wider, lower rim ledge + the main soil block, so
-    // the plot reads as a raised diorama with edges.
-    // Layered island base (UNLIT — CuboidGeometry has no normals, so a lit
-    // material would wash out; unlit renders the soil colour directly). Tops
-    // sit just below the lit tiles.
+    // Raised island base (UNLIT — CuboidGeometry has no normals, so a lit
+    // material would wash out; unlit renders the soil colour directly). A
+    // single block, its top well below the street so nothing z-fights.
     _addPlot(Node(
-      mesh: Mesh(CuboidGeometry(vm.Vector3(span + 0.9, 0.5, span + 0.9)),
-          _unlit(kCity3DRimColor)),
-    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.62, 0)));
-    _addPlot(Node(
-      mesh: Mesh(CuboidGeometry(vm.Vector3(span, 0.7, span)),
+      mesh: Mesh(CuboidGeometry(vm.Vector3(span + 0.5, 0.9, span + 0.5)),
           _unlit(kCity3DSoilColor)),
-    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.4, 0)));
+    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.6, 0)));
+
+    // Three stacked surfaces — street < sidewalk < grass — spaced into real
+    // curb heights so they never z-fight at grazing angles. Asphalt is inset so
+    // a soil rim shows around the plot.
+    _addPlot(Node(
+      mesh: Mesh(PlaneGeometry(width: span - 0.4, depth: span - 0.4),
+          _mat(_texAsphalt, rough: 0.85)),
+    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.10, 0)));
 
     final (lo, hi) = plotRange(_plotSize);
-    if (kCity3DCheckerboard) {
-      const t = kCell3DSpacing * 0.96;
-      for (var gx = lo; gx <= hi; gx++) {
-        for (var gy = lo; gy <= hi; gy++) {
-          final w = cellToWorld(gx, gy, gridSize: widget.gridSize);
-          final tex = (gx + gy).isEven ? _texGrassA : _texGrassB;
-          // Lit PlaneGeometry tile (has normals → shades + receives shadows).
-          _addPlot(Node(
-            mesh: Mesh(PlaneGeometry(width: t, depth: t), _mat(tex, rough: 0.9)),
-          )..localTransform =
-              vm.Matrix4.translation(vm.Vector3(w.x, 0.0, w.z)));
-        }
-      }
-    } else {
-      // Single lit grass top + thin unlit grid lines on every cell boundary.
-      _addPlot(Node(
-        mesh: Mesh(PlaneGeometry(width: span, depth: span),
-            _mat(_texGrassA, rough: 0.9)),
-      )..localTransform = vm.Matrix4.translation(vm.Vector3(0, 0.0, 0)));
-      for (var i = 0; i <= _plotSize; i++) {
-        final off = -half + i * kCell3DSpacing;
+    for (var gx = lo; gx <= hi; gx++) {
+      for (var gy = lo; gy <= hi; gy++) {
+        final w = cellToWorld(gx, gy, gridSize: widget.gridSize);
         _addPlot(Node(
-          mesh: Mesh(CuboidGeometry(vm.Vector3(0.06, 0.04, span)),
-              _unlit(kCity3DRimColor)),
-        )..localTransform = vm.Matrix4.translation(vm.Vector3(off, 0.01, 0)));
+          mesh: Mesh(
+              PlaneGeometry(
+                  width: kCity3DSidewalkSize, depth: kCity3DSidewalkSize),
+              _mat(_texSidewalk, rough: 0.9)),
+        )..localTransform =
+            vm.Matrix4.translation(vm.Vector3(w.x, -0.045, w.z)));
         _addPlot(Node(
-          mesh: Mesh(CuboidGeometry(vm.Vector3(span, 0.04, 0.06)),
-              _unlit(kCity3DRimColor)),
-        )..localTransform = vm.Matrix4.translation(vm.Vector3(0, 0.01, off)));
+          mesh: Mesh(
+              PlaneGeometry(width: kCity3DLotSize, depth: kCity3DLotSize),
+              _mat(_texGrass, rough: 0.9)),
+        )..localTransform = vm.Matrix4.translation(vm.Vector3(w.x, 0.0, w.z)));
       }
     }
 
+    _scatterTrees();
     _updateBuildHighlights();
+  }
+
+  /// Scatters sparse low-poly trees at street intersections (boundary corners,
+  /// so they never sit on a buildable lot). Async (GLB load); a generation
+  /// token ensures a newer plot rebuild wins over an in-flight scatter.
+  Future<void> _scatterTrees() async {
+    for (final n in _treeNodes) {
+      scene.remove(n);
+    }
+    _treeNodes.clear();
+    final gen = ++_treeGen;
+    final models = kCity3DTreeModels;
+    if (models.isEmpty) return;
+    for (final s in treeSpots(_plotSize, models: models.length)) {
+      final node =
+          await _models.prop(models[s.model], footprint: kCity3DTreeFootprint);
+      if (!mounted || gen != _treeGen) return; // superseded
+      final a = cellToWorld(s.i, s.j, gridSize: widget.gridSize);
+      final b = cellToWorld(s.i + 1, s.j + 1, gridSize: widget.gridSize);
+      node.localTransform = vm.Matrix4.translation(
+          vm.Vector3((a.x + b.x) / 2, 0, (a.z + b.z) / 2));
+      scene.add(node);
+      _treeNodes.add(node);
+    }
   }
 
   /// In build mode, marks every empty plot cell with a bright tile so the
@@ -454,7 +471,15 @@ class _CityScene3DState extends State<CityScene3D> {
           _radius * sin(_pitch),
           _radius * cp * cos(_yaw),
         );
-    return PerspectiveCamera(position: eye, target: _target.clone());
+    // Tight near/far for the small diorama → far better depth precision, which
+    // kills z-fighting (rainbow shimmer) between the close ground layers. The
+    // default far is 1000, which wrecks precision at this scale.
+    return PerspectiveCamera(
+      position: eye,
+      target: _target.clone(),
+      fovNear: 0.5,
+      fovFar: 160,
+    );
   }
 
   // --- Gesture handling -------------------------------------------------

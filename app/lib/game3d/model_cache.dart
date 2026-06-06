@@ -176,6 +176,28 @@ class City3DModels {
     return Node()..add(model);
   }
 
+  /// Loads a decorative prop (e.g. a tree) by asset path, uniformly scaled to
+  /// [footprint] and recentered (base at y=0, centered in X/Z). Bytes + bbox
+  /// are cached. Embedded-texture models keep their own materials.
+  final Map<String, GlbInfo> _propInfo = {};
+  Future<Node> prop(String assetPath, {double footprint = 1.0}) async {
+    final bytes = await _bytes.load(assetPath);
+    final info = _propInfo.putIfAbsent(
+        assetPath, () => gltfInfo(parseGlbJson(bytes)));
+    final node = await Node.fromGlbBytes(bytes);
+    final b = info.bounds;
+    if (b != null) {
+      final fp = math.max(b.max.x - b.min.x, b.max.z - b.min.z);
+      final s = fp > 1e-6 ? footprint / fp : 1.0;
+      final cx = (b.min.x + b.max.x) / 2;
+      final cz = (b.min.z + b.max.z) / 2;
+      node.localTransform =
+          vm.Matrix4.translation(vm.Vector3(-s * cx, -s * b.min.y, -s * cz))
+            ..scaleByDouble(s, s, s, 1);
+    }
+    return Node()..add(node);
+  }
+
   void _applyColormap(Node root) {
     final tex = _colormap;
     if (tex == null) return;

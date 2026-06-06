@@ -109,6 +109,25 @@ double fitRadius(double halfWidth, double halfDepth, double fovRadiansY) {
   return s > 1e-6 ? r / s : r;
 }
 
+/// Deterministic, sparse street-intersection spots for scattering trees, within
+/// the current plot. Each spot is an interior cell-corner (between cells i/i+1
+/// and j/j+1) plus a [model] index into the tree set. ~1 in 5 intersections.
+List<({int i, int j, int model})> treeSpots(
+  int plotSize, {
+  int maxGrid = kCity3DMaxGrid,
+  int models = 2,
+}) {
+  final (lo, hi) = plotRange(plotSize, maxGrid: maxGrid);
+  final spots = <({int i, int j, int model})>[];
+  for (var i = lo; i < hi; i++) {
+    for (var j = lo; j < hi; j++) {
+      final h = (i * 31 + j * 17) & 0xffff;
+      if (h % 5 == 0) spots.add((i: i, j: j, model: models > 0 ? h % models : 0));
+    }
+  }
+  return spots;
+}
+
 /// Stable key for a grid cell, used to track which node renders which cell.
 String cellKey(int gridX, int gridY) => '$gridX,$gridY';
 
