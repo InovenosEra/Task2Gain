@@ -65,6 +65,7 @@ const String kCity3DTexGrass = 'assets/city3d/textures/plot_grass.png';
 const String kCity3DTexAsphalt = 'assets/city3d/textures/plot_asphalt.png';
 const String kCity3DTexSidewalk = 'assets/city3d/textures/plot_sidewalk.png';
 const String kCity3DTexSoil = 'assets/city3d/textures/plot_soil.png';
+const String kCity3DTexCloud = 'assets/city3d/textures/plot_cloud.png';
 
 /// Lot/sidewalk widths within a cell ([kCell3DSpacing] = 2.4). The gap left by
 /// the sidewalk forms the street between blocks.

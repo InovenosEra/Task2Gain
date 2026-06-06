@@ -9,6 +9,7 @@ import '../models/city.dart';
 import 'city3d_config.dart';
 import 'city3d_layout.dart';
 import 'model_cache.dart';
+import 'world_chunks.dart';
 
 /// 3D city view bound to the real city data (Stage 3): a warm, lit diorama
 /// with soft shadows and a ground plane, rendering the player's actual
@@ -92,7 +93,8 @@ class _CityScene3DState extends State<CityScene3D> {
   final Map<String, Node> _highlights = {}; // build-mode empty-cell markers
   int _treeGen = 0; // guards async tree scatter against stale rebuilds
   // Street-top textures (colour baked in). Loaded once in _init.
-  Object? _texGrass, _texAsphalt, _texSidewalk, _texSoil;
+  Object? _texGrass, _texAsphalt, _texSidewalk, _texSoil, _texCloud;
+  final List<Node> _cloudNodes = []; // static hidden-chunk cloud cover
 
   // --- City reconciliation state ----------------------------------------
   // cellKey → the node currently rendering that cell, and the spec it renders.
@@ -211,12 +213,56 @@ class _CityScene3DState extends State<CityScene3D> {
     _texAsphalt = await _models.texture(kCity3DTexAsphalt);
     _texSidewalk = await _models.texture(kCity3DTexSidewalk);
     _texSoil = await _models.texture(kCity3DTexSoil);
+    _texCloud = await _models.texture(kCity3DTexCloud);
 
-    // The buildable plot: a raised island platform topped with a soft-green
-    // checkerboard (or grid lines), sized to the current plot.
+    // The revealed (current) city plot — streets, lots, trees, buildings.
     _buildPlot();
+    // The surrounding hidden chunks, covered in cloud (fog of war).
+    _buildHiddenChunks();
 
     await _models.warmUp();
+  }
+
+  /// Deterministic cloud-puff layout within a chunk (dx, dz from chunk center,
+  /// radius). Covers the 24-unit chunk with a few overlapping low-poly puffs.
+  static const List<(double, double, double)> _cloudPuffs = [
+    (0, 0, 7.5),
+    (-8, -7, 6),
+    (8, -7, 6),
+    (-8, 7, 6),
+    (8, 7, 6),
+    (0, -9, 5),
+    (0, 9, 5),
+    (-10, 0, 5),
+    (10, 0, 5),
+  ];
+
+  /// Renders the hidden world chunks as a stylized low-poly cloud cover, so the
+  /// player senses there's more world out there. Static (no reveal logic yet).
+  void _buildHiddenChunks() {
+    for (final ch in defaultWorld()) {
+      if (ch.revealed) continue;
+      final o = chunkWorldOffset(ch.col, ch.row);
+      // A soft haze floor covering the whole chunk (lit → soft shading).
+      _cloud(Node(
+        mesh: Mesh(PlaneGeometry(width: kChunkSpan, depth: kChunkSpan),
+            _mat(_texCloud, rough: 1.0)),
+      )..localTransform = vm.Matrix4.translation(vm.Vector3(o.x, 0.7, o.z)));
+      // Overlapping puffs for cloud volume (lit spheres, flattened to domes).
+      for (final p in _cloudPuffs) {
+        _cloud(Node(
+          mesh: Mesh(SphereGeometry(radius: p.$3, segments: 12, rings: 7),
+              _mat(_texCloud, rough: 1.0)),
+        )..localTransform =
+            (vm.Matrix4.translation(vm.Vector3(o.x + p.$1, 1.3, o.z + p.$2))
+              ..scaleByDouble(1.0, 0.55, 1.0, 1)));
+      }
+    }
+  }
+
+  void _cloud(Node n) {
+    scene.add(n);
+    _cloudNodes.add(n);
   }
 
   /// Lit material (PlaneGeometry only — it has normals) carrying a grass tex.
