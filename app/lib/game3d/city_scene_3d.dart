@@ -93,7 +93,7 @@ class _CityScene3DState extends State<CityScene3D> {
   final Map<String, Node> _highlights = {}; // build-mode empty-cell markers
   int _treeGen = 0; // guards async tree scatter against stale rebuilds
   // Street-top textures (colour baked in). Loaded once in _init.
-  Object? _texGrass, _texAsphalt, _texSidewalk, _texSoil, _texCloud;
+  Object? _texGrass, _texAsphalt, _texSidewalk, _texSoil;
   final List<Node> _cloudNodes = []; // static hidden-chunk cloud cover
 
   // --- City reconciliation state ----------------------------------------
@@ -213,7 +213,6 @@ class _CityScene3DState extends State<CityScene3D> {
     _texAsphalt = await _models.texture(kCity3DTexAsphalt);
     _texSidewalk = await _models.texture(kCity3DTexSidewalk);
     _texSoil = await _models.texture(kCity3DTexSoil);
-    _texCloud = await _models.texture(kCity3DTexCloud);
 
     // The revealed (current) city plot — streets, lots, trees, buildings.
     _buildPlot();
@@ -226,36 +225,38 @@ class _CityScene3DState extends State<CityScene3D> {
   /// Deterministic cloud-puff layout within a chunk (dx, dz from chunk center,
   /// radius). Covers the 24-unit chunk with a few overlapping low-poly puffs.
   static const List<(double, double, double)> _cloudPuffs = [
-    (0, 0, 7.5),
-    (-8, -7, 6),
-    (8, -7, 6),
-    (-8, 7, 6),
-    (8, 7, 6),
-    (0, -9, 5),
-    (0, 9, 5),
-    (-10, 0, 5),
-    (10, 0, 5),
+    (0, 0, 5.5),
+    (-9, -9, 4.5),
+    (9, -9, 4.5),
+    (-9, 9, 4.5),
+    (9, 9, 4.5),
+    (0, -10, 4.0),
+    (0, 10, 4.0),
+    (-10, 0, 4.0),
+    (10, 0, 4.0),
   ];
 
-  /// Renders the hidden world chunks as a stylized low-poly cloud cover, so the
-  /// player senses there's more world out there. Static (no reveal logic yet).
+  /// Renders the hidden world chunks as soft, low, white fog-of-war — bright
+  /// UNLIT puffs (no greying) so the player senses there's more world out there
+  /// without being walled in. Static (no reveal logic yet).
   void _buildHiddenChunks() {
     for (final ch in defaultWorld()) {
       if (ch.revealed) continue;
       final o = chunkWorldOffset(ch.col, ch.row);
-      // A soft haze floor covering the whole chunk (lit → soft shading).
+      // A low soft mist floor covering the chunk (unlit → bright, no grey).
       _cloud(Node(
         mesh: Mesh(PlaneGeometry(width: kChunkSpan, depth: kChunkSpan),
-            _mat(_texCloud, rough: 1.0)),
-      )..localTransform = vm.Matrix4.translation(vm.Vector3(o.x, 0.7, o.z)));
-      // Overlapping puffs for cloud volume (lit spheres, flattened to domes).
+            _unlit(kCity3DCloudColor)),
+      )..localTransform = vm.Matrix4.translation(vm.Vector3(o.x, 0.2, o.z)));
+      // Soft, flattened puffs forming a gentle continuous frontier (lower than
+      // the tall buildings, so it frames rather than walls in).
       for (final p in _cloudPuffs) {
         _cloud(Node(
-          mesh: Mesh(SphereGeometry(radius: p.$3, segments: 12, rings: 7),
-              _mat(_texCloud, rough: 1.0)),
+          mesh: Mesh(SphereGeometry(radius: p.$3, segments: 14, rings: 8),
+              _unlit(kCity3DCloudColor)),
         )..localTransform =
-            (vm.Matrix4.translation(vm.Vector3(o.x + p.$1, 1.3, o.z + p.$2))
-              ..scaleByDouble(1.0, 0.55, 1.0, 1)));
+            (vm.Matrix4.translation(vm.Vector3(o.x + p.$1, 0.6, o.z + p.$2))
+              ..scaleByDouble(1.0, 0.5, 1.0, 1)));
       }
     }
   }
