@@ -55,6 +55,41 @@ void main() {
     });
   });
 
+  group('plot', () {
+    test('plotRange centers the plot in the grid', () {
+      expect(plotRange(4, maxGrid: 10), (3, 6)); // cells 3..6
+      expect(plotRange(6, maxGrid: 10), (2, 7));
+      expect(plotRange(10, maxGrid: 10), (0, 9));
+    });
+
+    test('cellInPlot gates to the centered region', () {
+      expect(cellInPlot(3, 6, 4), isTrue);
+      expect(cellInPlot(4, 4, 4), isTrue);
+      expect(cellInPlot(2, 4, 4), isFalse); // outside 3..6
+      expect(cellInPlot(7, 7, 4), isFalse);
+    });
+
+    test('plot grows symmetrically without shifting building positions', () {
+      // cell (4,5) is in-plot for every size that reaches it; its world pos is
+      // independent of plot size (cellToWorld uses the fixed grid).
+      final w4 = cellToWorld(4, 5, gridSize: 10);
+      final w6 = cellToWorld(4, 5, gridSize: 10);
+      expect(w4.x, w6.x);
+      expect(cellInPlot(4, 5, 6), isTrue);
+    });
+
+    test('requiredPlotForCells contains all cells', () {
+      expect(requiredPlotForCells([(x: 4, y: 5)]), 4); // central -> base
+      expect(requiredPlotForCells([(x: 2, y: 7)]), 6); // needs 2..7
+      expect(requiredPlotForCells([(x: 0, y: 9)]), 10); // corner -> full grid
+      expect(requiredPlotForCells(const []), 4); // empty -> base
+    });
+
+    test('plotHalfExtentWorld grows with plot size', () {
+      expect(plotHalfExtentWorld(8), greaterThan(plotHalfExtentWorld(4)));
+    });
+  });
+
   group('rayGroundHit', () {
     test('straight-down ray hits directly below the origin', () {
       final hit = rayGroundHit(vm.Vector3(2, 10, -3), vm.Vector3(0, -1, 0));

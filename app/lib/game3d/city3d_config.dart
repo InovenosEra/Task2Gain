@@ -34,8 +34,44 @@ const double kCity3DTargetFootprint = 2.0;
 const double kCity3DHeightRef = 22.0;
 const double kCity3DMaxVStretch = 2.4;
 
-/// MegaCity flat grass tile (15x15) tiled to form the city ground.
-const String kCity3DGroundTile = 'assets/city3d/models/grass_001.glb';
+// --- City plot (the buildable island) --------------------------------------
+
+/// The world grid the coordinate system is anchored to (matches the Flame
+/// board). Building cells (gridX/gridY) live in 0..kCity3DMaxGrid-1, and
+/// `cellToWorld` always centers on this — so building positions never shift as
+/// the plot grows.
+const int kCity3DMaxGrid = 10;
+
+/// Plot growth rule — the buildable plot is a centered P×P sub-region of the
+/// grid, where P grows with the player's city level. THIS is the one knob to
+/// tune progression: starts at [kCity3DBasePlot], gains
+/// [kCity3DPlotGrowthPerLevel] per level, capped at [kCity3DMaxGrid].
+const int kCity3DBasePlot = 4;
+const int kCity3DPlotGrowthPerLevel = 1;
+
+int plotSizeForLevel(int cityLevel) =>
+    (kCity3DBasePlot + (cityLevel - 1) * kCity3DPlotGrowthPerLevel)
+        .clamp(kCity3DBasePlot, kCity3DMaxGrid);
+
+// --- Plot look -------------------------------------------------------------
+
+/// Grid-marking style on the plot top. true = soft two-tone checkerboard
+/// (per-cell shading + grid in one); false = single green top with thin lines.
+const bool kCity3DCheckerboard = true;
+
+/// Grass textures for the LIT tile tops (PlaneGeometry, which has normals —
+/// CuboidGeometry has none, so PBR can't shade it). Colour is baked dark in the
+/// texture so the strong key light lands on a pleasant grass green, not a blown
+/// white. Two tones for the checkerboard variation.
+const String kCity3DTexGrassA = 'assets/city3d/textures/plot_grass_a.png';
+const String kCity3DTexGrassB = 'assets/city3d/textures/plot_grass_b.png';
+
+/// UNLIT island-base + highlight colours (baseColorFactor works on UnlitMaterial,
+/// which renders the colour directly — no lighting, so no normals needed and no
+/// washout). The base sides don't need to receive shadows.
+const List<double> kCity3DSoilColor = [0.42, 0.30, 0.19, 1.0];
+const List<double> kCity3DRimColor = [0.31, 0.22, 0.14, 1.0];
+const List<double> kCity3DHighlightColor = [0.62, 0.85, 0.38, 1.0];
 
 /// Model mapping — building type id → GLB filename under [kCity3DModelDir].
 ///

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:vector_math/vector_math.dart' as vm;
 
 import '../models/city.dart';
+import 'city3d_config.dart';
 
 /// World units between adjacent grid cells in the 3D city.
 const double kCell3DSpacing = 2.4;
@@ -43,6 +44,48 @@ double scaleForLevel(int level) => 1.0 + (level - 1).clamp(0, 100) * 0.14;
 /// Whether a cell is inside a [gridSize] x [gridSize] board.
 bool cellInBounds(int x, int y, {int gridSize = 10}) =>
     x >= 0 && y >= 0 && x < gridSize && y < gridSize;
+
+/// Inclusive cell index range [lo, hi] of a centered [plotSize] x [plotSize]
+/// plot within a [maxGrid] x [maxGrid] board (so the plot grows symmetrically
+/// around the board center, keeping building positions stable).
+(int, int) plotRange(int plotSize, {int maxGrid = kCity3DMaxGrid}) {
+  final p = plotSize.clamp(1, maxGrid);
+  final lo = (maxGrid - p) ~/ 2;
+  return (lo, lo + p - 1);
+}
+
+/// Whether cell (x, y) is inside the current centered plot.
+bool cellInPlot(int x, int y, int plotSize, {int maxGrid = kCity3DMaxGrid}) {
+  final (lo, hi) = plotRange(plotSize, maxGrid: maxGrid);
+  return x >= lo && x <= hi && y >= lo && y <= hi;
+}
+
+/// Smallest centered plot size (in [kCity3DBasePlot]..[maxGrid]) that contains
+/// every given cell. Used to ensure pre-existing buildings are never left off
+/// the plot, even if the level-based size would be smaller.
+int requiredPlotForCells(
+  Iterable<({int x, int y})> cells, {
+  int maxGrid = kCity3DMaxGrid,
+  int base = kCity3DBasePlot,
+}) {
+  for (var p = base; p <= maxGrid; p++) {
+    if (cells.every((c) => cellInPlot(c.x, c.y, p, maxGrid: maxGrid))) return p;
+  }
+  return maxGrid;
+}
+
+/// Half the world extent (origin → edge) of a centered [plotSize] plot,
+/// including a half-cell of padding, for framing + platform sizing.
+double plotHalfExtentWorld(
+  int plotSize, {
+  int maxGrid = kCity3DMaxGrid,
+  double spacing = kCell3DSpacing,
+}) {
+  final (lo, hi) = plotRange(plotSize, maxGrid: maxGrid);
+  final loW = cellToWorld(lo, lo, gridSize: maxGrid, spacing: spacing);
+  final hiW = cellToWorld(hi, hi, gridSize: maxGrid, spacing: spacing);
+  return (hiW.x - loW.x) / 2 + spacing / 2;
+}
 
 /// Intersects a ray (from [origin] along [dir]) with the ground plane y = 0.
 /// Returns the hit point, or null if the ray is parallel to or points away

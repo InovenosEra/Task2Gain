@@ -586,8 +586,10 @@ class _CityScreenState extends State<CityScreen>
           child: kUse3DCity
               ? CityScene3D(
                   buildings: _city.buildings,
+                  cityLevel: _city.cityLevel,
                   onCellTapped: _onCellTapped,
                   selectedCell: _selectedCell,
+                  buildMode: _armedType != null || _movingCell != null,
                   anchorSink: _anchor3D,
                 )
               : GameWidget(game: _game),

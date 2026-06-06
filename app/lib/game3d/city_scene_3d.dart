@@ -6,6 +6,7 @@ import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
 import '../models/city.dart';
+import 'city3d_config.dart';
 import 'city3d_layout.dart';
 import 'model_cache.dart';
 
@@ -20,9 +21,11 @@ class CityScene3D extends StatefulWidget {
   const CityScene3D({
     super.key,
     required this.buildings,
-    this.gridSize = 10,
+    this.cityLevel = 1,
+    this.gridSize = kCity3DMaxGrid,
     this.onCellTapped,
     this.selectedCell,
+    this.buildMode = false,
     this.anchorSink,
   });
 
@@ -30,8 +33,15 @@ class CityScene3D extends StatefulWidget {
   /// instance on each stream update triggers reconciliation.
   final List<PlacedBuilding> buildings;
 
-  /// Grid dimension, used to center the city on the origin.
+  /// The player's current city level — the buildable plot grows with it.
+  final int cityLevel;
+
+  /// Grid dimension the coordinates are anchored to (matches the Flame board);
+  /// the plot is a centered sub-region that grows with [cityLevel].
   final int gridSize;
+
+  /// True while arming a placement / relocating, so empty plot cells highlight.
+  final bool buildMode;
 
   /// Called when the player taps an in-bounds grid cell. Routes to the same
   /// select / place / move logic the Flame board uses (`_onCellTapped`).
@@ -72,13 +82,15 @@ class _CityScene3DState extends State<CityScene3D> {
   // change; floored so a tiny/empty city still pulls back sensibly.
   double _maxRadius = 40;
 
-  // Ground sizing: tile MegaCity's 15x15 grass over a span comfortably larger
-  // than the full grid so it fills the frame at max zoom-out.
-  static const double _groundTileSize = 15.0;
-  static const double _groundSpan = 75.0;
-
   double _gestureStartRadius = 17;
   Size _viewSize = Size.zero;
+
+  // --- Plot state (the buildable island) --------------------------------
+  int _plotSize = kCity3DBasePlot;
+  final List<Node> _plotNodes = []; // platform + tiles + grid lines
+  final Map<String, Node> _highlights = {}; // build-mode empty-cell markers
+  // Grass textures for the lit tile tops. Loaded once in _init.
+  Object? _texGrassA, _texGrassB;
 
   // --- City reconciliation state ----------------------------------------
   // cellKey → the node currently rendering that cell, and the spec it renders.
@@ -92,6 +104,7 @@ class _CityScene3DState extends State<CityScene3D> {
   @override
   void initState() {
     super.initState();
+    _plotSize = _computePlotSize();
     _ready = _init();
     _desired = widget.buildings;
     _targetGen = 1;
@@ -115,8 +128,17 @@ class _CityScene3DState extends State<CityScene3D> {
     if (!identical(old.buildings, widget.buildings)) {
       _desired = widget.buildings;
       _targetGen++;
-      _recomputeMaxRadius();
       _pump();
+    }
+    // Grow the plot if the level (or building spread) changed.
+    final newPlot = _computePlotSize();
+    final plotChanged = newPlot != _plotSize;
+    if (plotChanged) {
+      _plotSize = newPlot;
+      _recomputeMaxRadius(); // framing tracks the plot
+      _ready.then((_) {
+        if (mounted) _buildPlot(); // also refreshes highlights
+      });
     }
     // Re-apply the transform of the de-selected and newly-selected cells so the
     // highlight lift follows the selection.
@@ -129,6 +151,23 @@ class _CityScene3DState extends State<CityScene3D> {
         if (node != null && spec != null) _transformFor(node, spec);
       }
     }
+    // Refresh build-mode highlights when build mode toggles or buildings
+    // change (plot growth already refreshes them via _buildPlot).
+    if (!plotChanged &&
+        (old.buildMode != widget.buildMode ||
+            !identical(old.buildings, widget.buildings))) {
+      _ready.then((_) {
+        if (mounted) _updateBuildHighlights();
+      });
+    }
+  }
+
+  int _computePlotSize() {
+    final cells = widget.buildings.map((b) => (x: b.gridX, y: b.gridY));
+    return max(
+      plotSizeForLevel(widget.cityLevel),
+      requiredPlotForCells(cells),
+    );
   }
 
   Future<void> _init() async {
@@ -144,7 +183,7 @@ class _CityScene3DState extends State<CityScene3D> {
       shadowMapResolution: 2048,
       shadowNormalBias: 0.04,
     );
-    scene.environmentIntensity = 0.8;
+    scene.environmentIntensity = 0.5;
 
     // Warm color grade + gentle bloom + vignette. colorGrading defaults OFF;
     // post-process changes only apply on a COLD restart, not hot reload.
@@ -165,32 +204,120 @@ class _CityScene3DState extends State<CityScene3D> {
       ..radius = 0.85
       ..smoothness = 0.6;
 
-    // Cohesive ground from MegaCity's own grass tile (15x15), tiled to a grid
-    // that comfortably exceeds the city so it never reads as a void. A thin
-    // warm base sits just under it to hide any seams / give the plot edges.
-    final base = Node(
-      mesh: Mesh(
-        CuboidGeometry(vm.Vector3(_groundSpan, 0.4, _groundSpan)),
-        PhysicallyBasedMaterial()
-          ..baseColorFactor = vm.Vector4(0.34, 0.44, 0.24, 1.0) // warm grass
-          ..metallicFactor = 0.0
-          ..roughnessFactor = 0.95,
-      ),
-    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.22, 0));
-    scene.add(base);
+    // Load the lit-tile grass textures, then build the plot.
+    _texGrassA = await _models.texture(kCity3DTexGrassA);
+    _texGrassB = await _models.texture(kCity3DTexGrassB);
 
-    const tile = _groundTileSize;
-    final reach = (_groundSpan / tile / 2).ceil();
-    for (var ix = -reach; ix <= reach; ix++) {
-      for (var iz = -reach; iz <= reach; iz++) {
-        final t = await _models.groundTile();
-        t.localTransform =
-            vm.Matrix4.translation(vm.Vector3(ix * tile, 0, iz * tile));
-        scene.add(t);
+    // The buildable plot: a raised island platform topped with a soft-green
+    // checkerboard (or grid lines), sized to the current plot.
+    _buildPlot();
+
+    await _models.warmUp();
+  }
+
+  /// Lit material (PlaneGeometry only — it has normals) carrying a grass tex.
+  PhysicallyBasedMaterial _mat(Object? tex, {double rough = 0.95}) {
+    final m = PhysicallyBasedMaterial()
+      ..metallicFactor = 0.0
+      ..roughnessFactor = rough;
+    if (tex != null) m.baseColorTexture = tex as dynamic;
+    return m;
+  }
+
+  /// Unlit material whose [c] colour renders directly (works on any geometry,
+  /// no normals/lighting needed) — used for the island base + highlights.
+  UnlitMaterial _unlit(List<double> c) => UnlitMaterial()
+    ..baseColorFactor = vm.Vector4(c[0], c[1], c[2], c.length > 3 ? c[3] : 1.0);
+
+  void _addPlot(Node n) {
+    scene.add(n);
+    _plotNodes.add(n);
+  }
+
+  /// (Re)builds the plot: a layered island base + a soft-green top (checkerboard
+  /// tiles, or a single top with grid lines), sized to [_plotSize] and centered
+  /// on the grid origin. Buildings sit on the tile tops at y=0.
+  void _buildPlot() {
+    for (final n in _plotNodes) {
+      scene.remove(n);
+    }
+    _plotNodes.clear();
+
+    final half = plotHalfExtentWorld(_plotSize);
+    final span = half * 2;
+
+    // Layered island base: a wider, lower rim ledge + the main soil block, so
+    // the plot reads as a raised diorama with edges.
+    // Layered island base (UNLIT — CuboidGeometry has no normals, so a lit
+    // material would wash out; unlit renders the soil colour directly). Tops
+    // sit just below the lit tiles.
+    _addPlot(Node(
+      mesh: Mesh(CuboidGeometry(vm.Vector3(span + 0.9, 0.5, span + 0.9)),
+          _unlit(kCity3DRimColor)),
+    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.62, 0)));
+    _addPlot(Node(
+      mesh: Mesh(CuboidGeometry(vm.Vector3(span, 0.7, span)),
+          _unlit(kCity3DSoilColor)),
+    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.4, 0)));
+
+    final (lo, hi) = plotRange(_plotSize);
+    if (kCity3DCheckerboard) {
+      const t = kCell3DSpacing * 0.96;
+      for (var gx = lo; gx <= hi; gx++) {
+        for (var gy = lo; gy <= hi; gy++) {
+          final w = cellToWorld(gx, gy, gridSize: widget.gridSize);
+          final tex = (gx + gy).isEven ? _texGrassA : _texGrassB;
+          // Lit PlaneGeometry tile (has normals → shades + receives shadows).
+          _addPlot(Node(
+            mesh: Mesh(PlaneGeometry(width: t, depth: t), _mat(tex, rough: 0.9)),
+          )..localTransform =
+              vm.Matrix4.translation(vm.Vector3(w.x, 0.0, w.z)));
+        }
+      }
+    } else {
+      // Single lit grass top + thin unlit grid lines on every cell boundary.
+      _addPlot(Node(
+        mesh: Mesh(PlaneGeometry(width: span, depth: span),
+            _mat(_texGrassA, rough: 0.9)),
+      )..localTransform = vm.Matrix4.translation(vm.Vector3(0, 0.0, 0)));
+      for (var i = 0; i <= _plotSize; i++) {
+        final off = -half + i * kCell3DSpacing;
+        _addPlot(Node(
+          mesh: Mesh(CuboidGeometry(vm.Vector3(0.06, 0.04, span)),
+              _unlit(kCity3DRimColor)),
+        )..localTransform = vm.Matrix4.translation(vm.Vector3(off, 0.01, 0)));
+        _addPlot(Node(
+          mesh: Mesh(CuboidGeometry(vm.Vector3(span, 0.04, 0.06)),
+              _unlit(kCity3DRimColor)),
+        )..localTransform = vm.Matrix4.translation(vm.Vector3(0, 0.01, off)));
       }
     }
 
-    await _models.warmUp();
+    _updateBuildHighlights();
+  }
+
+  /// In build mode, marks every empty plot cell with a bright tile so the
+  /// player sees where they can drop. Cleared otherwise.
+  void _updateBuildHighlights() {
+    for (final n in _highlights.values) {
+      scene.remove(n);
+    }
+    _highlights.clear();
+    if (!widget.buildMode) return;
+    final (lo, hi) = plotRange(_plotSize);
+    const t = kCell3DSpacing * 0.9;
+    for (var gx = lo; gx <= hi; gx++) {
+      for (var gy = lo; gy <= hi; gy++) {
+        if (_spec.containsKey(cellKey(gx, gy))) continue; // occupied
+        final w = cellToWorld(gx, gy, gridSize: widget.gridSize);
+        final n = Node(
+          mesh: Mesh(PlaneGeometry(width: t, depth: t),
+              _unlit(kCity3DHighlightColor)),
+        )..localTransform = vm.Matrix4.translation(vm.Vector3(w.x, 0.02, w.z));
+        scene.add(n);
+        _highlights[cellKey(gx, gy)] = n;
+      }
+    }
   }
 
   /// Serialized reconcile loop. Always drives the scene toward the latest
@@ -236,6 +363,11 @@ class _CityScene3DState extends State<CityScene3D> {
       if (node != null) _transformFor(node, b);
       _spec[cellKey(b.gridX, b.gridY)] = b;
     }
+
+    // Keep build-mode highlights in sync with occupancy after a reconcile.
+    if (widget.buildMode && (diff.toAdd.isNotEmpty || diff.toRemove.isNotEmpty)) {
+      _updateBuildHighlights();
+    }
   }
 
   void _transformFor(Node node, PlacedBuilding b) {
@@ -262,7 +394,8 @@ class _CityScene3DState extends State<CityScene3D> {
     final hit = rayGroundHit(ray.origin, ray.dir);
     if (hit == null) return;
     final cell = worldToCell(hit.x, hit.z, gridSize: widget.gridSize);
-    if (!cellInBounds(cell.x, cell.y, gridSize: widget.gridSize)) return;
+    // Only cells within the unlocked plot are interactive.
+    if (!cellInPlot(cell.x, cell.y, _plotSize)) return;
     cb(cell.x, cell.y);
   }
 
@@ -302,33 +435,13 @@ class _CityScene3DState extends State<CityScene3D> {
     );
   }
 
-  /// Recomputes the zoom-out limit so the whole city fits at max zoom-out.
-  /// Uses the world bounding box of the placed buildings (or the full grid when
-  /// empty), plus a margin, fitted to the camera FOV. Floored so a tiny city
-  /// still pulls back, capped so it never goes absurd.
+  /// Recomputes the zoom-out limit so the whole PLOT fits at max zoom-out
+  /// (tracks plot size, not just the buildings, so the framing grows with the
+  /// island). Floored for tiny plots, capped so it never goes absurd.
   void _recomputeMaxRadius() {
-    double minX, maxX, minZ, maxZ;
-    if (widget.buildings.isEmpty) {
-      final a = cellToWorld(0, 0, gridSize: widget.gridSize);
-      final b = cellToWorld(
-          widget.gridSize - 1, widget.gridSize - 1,
-          gridSize: widget.gridSize);
-      minX = a.x; maxX = b.x; minZ = a.z; maxZ = b.z;
-    } else {
-      minX = minZ = double.infinity;
-      maxX = maxZ = -double.infinity;
-      for (final bld in widget.buildings) {
-        final w = cellToWorld(bld.gridX, bld.gridY, gridSize: widget.gridSize);
-        minX = min(minX, w.x);
-        maxX = max(maxX, w.x);
-        minZ = min(minZ, w.z);
-        maxZ = max(maxZ, w.z);
-      }
-    }
-    final halfW = (maxX - minX) / 2 + _cityMargin;
-    final halfD = (maxZ - minZ) / 2 + _cityMargin;
-    final fit = fitRadius(halfW, halfD, _fovRadiansY);
-    _maxRadius = fit.clamp(22.0, 110.0);
+    final half = plotHalfExtentWorld(_plotSize) + _cityMargin;
+    final fit = fitRadius(half, half, _fovRadiansY);
+    _maxRadius = fit.clamp(18.0, 110.0);
     // Never let the current radius exceed the new cap.
     if (_radius > _maxRadius) _radius = _maxRadius;
   }

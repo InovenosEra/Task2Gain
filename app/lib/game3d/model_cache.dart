@@ -127,6 +127,20 @@ class City3DModels {
   Object? _colormap;
   Future<void>? _colormapLoad;
 
+  /// Loads (and caches) a gpu texture from an asset, for the procedural plot
+  /// materials. Returns null if it fails to decode.
+  final Map<String, Object?> _textures = {};
+  Future<Object?> texture(String assetPath) async {
+    if (_textures.containsKey(assetPath)) return _textures[assetPath];
+    try {
+      _textures[assetPath] = await gpuTextureFromAsset(assetPath);
+    } catch (e) {
+      debugPrint('city3d: texture $assetPath not loaded: $e');
+      _textures[assetPath] = null;
+    }
+    return _textures[assetPath];
+  }
+
   /// Pre-loads the shared colormap so the first building placement is instant.
   /// Safe to call repeatedly; the work happens once.
   Future<void> warmUp() => _colormapLoad ??= _loadColormap();
@@ -160,13 +174,6 @@ class City3DModels {
     if (norm.needsColormap) _applyColormap(model);
 
     return Node()..add(model);
-  }
-
-  /// A fresh instance of the MegaCity grass ground tile at its native size
-  /// (caller tiles it). Bytes are cached so repeated tiles only re-parse.
-  Future<Node> groundTile() async {
-    final bytes = await _bytes.load(kCity3DGroundTile);
-    return Node.fromGlbBytes(bytes);
   }
 
   void _applyColormap(Node root) {
