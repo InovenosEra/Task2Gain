@@ -94,6 +94,14 @@ const List<double> kCity3DHighlightColor = [0.62, 0.85, 0.38, 1.0];
 /// they can't place there. Valid cells get no marking.
 const List<double> kCity3DBlockedColor = [0.86, 0.20, 0.17, 1.0];
 
+/// Low-poly stone wall ringing the plot — built from LIT PlaneGeometry faces
+/// (CuboidGeometry's no-normals silhouette fringes prismatic at grazing angles,
+/// per the rendering notes). Stone colour comes from a texture; lighting makes
+/// the top caps read brighter than the vertical faces automatically. The grass
+/// sits below the wall top, so the developed area reads as sunken inside it.
+const String kCity3DTexStone = 'assets/city3d/textures/plot_stone.png';
+const double kCity3DWallHeight = 1.25;
+
 /// Model mapping — building type id → GLB filename under [kCity3DModelDir].
 ///
 /// Uses the ITHappy MegaCity pack (embedded textures, auto-scaled/recentered by

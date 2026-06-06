@@ -9,7 +9,6 @@ import '../models/city.dart';
 import 'city3d_config.dart';
 import 'city3d_layout.dart';
 import 'model_cache.dart';
-import 'world_chunks.dart';
 
 /// 3D city view bound to the real city data (Stage 3): a warm, lit diorama
 /// with soft shadows and a ground plane, rendering the player's actual
@@ -93,7 +92,7 @@ class _CityScene3DState extends State<CityScene3D> {
   final Map<String, Node> _highlights = {}; // build-mode empty-cell markers
   int _treeGen = 0; // guards async tree scatter against stale rebuilds
   // Street-top textures (colour baked in). Loaded once in _init.
-  Object? _texGrass, _texSoil, _texCloud;
+  Object? _texGrass, _texSoil, _texCloud, _texStone;
   final List<Node> _cloudNodes = []; // static hidden-chunk cloud cover
 
   // --- City reconciliation state ----------------------------------------
@@ -212,51 +211,12 @@ class _CityScene3DState extends State<CityScene3D> {
     _texGrass = await _models.texture(kCity3DTexGrass);
     _texSoil = await _models.texture(kCity3DTexSoil);
     _texCloud = await _models.texture(kCity3DTexCloud);
+    _texStone = await _models.texture(kCity3DTexStone);
 
-    // The revealed (current) city plot — streets, lots, trees, buildings.
+    // The revealed plot (grass + wall), the cloud frontier, trees, buildings.
     _buildPlot();
-    // The surrounding hidden chunks, covered in cloud (fog of war).
-    _buildHiddenChunks();
 
     await _models.warmUp();
-  }
-
-  /// Deterministic cloud-puff layout within a chunk (dx, dz from chunk center,
-  /// radius). Covers the 24-unit chunk with a few overlapping low-poly puffs.
-  /// Renders the hidden world chunks as a fluffy WHITE cloud bank — LIT puffs
-  /// (volume + soft self-shadowing) over a solid soft floor that hides what's
-  /// beneath. A grid of overlapping puffs reaches in to hug the revealed plot's
-  /// edge (no beige gap), and is culled to a band near the city. Static.
-  void _buildHiddenChunks() {
-    final half = plotHalfExtentWorld(_plotSize);
-    final cull = half + 16; // how far the cloud band extends from origin
-    for (final ch in defaultWorld()) {
-      if (ch.revealed) continue;
-      final o = chunkWorldOffset(ch.col, ch.row);
-      // Solid soft floor over the chunk (lit white) — hides what's beneath and
-      // hugs the plot edge at the shared boundary.
-      _cloud(Node(
-        mesh: Mesh(PlaneGeometry(width: kChunkSpan, depth: kChunkSpan),
-            _mat(_texCloud, rough: 1.0)),
-      )..localTransform = vm.Matrix4.translation(vm.Vector3(o.x, 0.35, o.z)));
-      // Overlapping fluffy puffs (grid), culled to the band near the city.
-      var i = 0;
-      for (final dx in const [-10.0, 0.0, 10.0]) {
-        for (final dz in const [-10.0, 0.0, 10.0]) {
-          final wx = o.x + dx, wz = o.z + dz;
-          i++;
-          if (max(wx.abs(), wz.abs()) > cull) continue;
-          final r = 4.4 + ((i % 3) - 1) * 0.7; // 3.7..5.1 size variation
-          final y = 1.1 + (i % 2) * 0.5;
-          _cloud(Node(
-            mesh: Mesh(SphereGeometry(radius: r, segments: 12, rings: 7),
-                _mat(_texCloud, rough: 1.0)),
-          )..localTransform =
-              (vm.Matrix4.translation(vm.Vector3(wx, y, wz))
-                ..scaleByDouble(1.0, 0.65, 1.0, 1)));
-        }
-      }
-    }
   }
 
   void _cloud(Node n) {
@@ -264,11 +224,14 @@ class _CityScene3DState extends State<CityScene3D> {
     _cloudNodes.add(n);
   }
 
-  /// Lit material (PlaneGeometry only — it has normals) carrying a grass tex.
-  PhysicallyBasedMaterial _mat(Object? tex, {double rough = 0.95}) {
+  /// Lit material (PlaneGeometry/SphereGeometry only — they have normals)
+  /// carrying a texture. [doubleSided] for thin wall faces seen from both sides.
+  PhysicallyBasedMaterial _mat(Object? tex,
+      {double rough = 0.95, bool doubleSided = false}) {
     final m = PhysicallyBasedMaterial()
       ..metallicFactor = 0.0
-      ..roughnessFactor = rough;
+      ..roughnessFactor = rough
+      ..doubleSided = doubleSided;
     if (tex != null) m.baseColorTexture = tex as dynamic;
     return m;
   }
@@ -310,8 +273,75 @@ class _CityScene3DState extends State<CityScene3D> {
           _mat(_texGrass, rough: 0.95)),
     )..localTransform = vm.Matrix4.translation(vm.Vector3(0, 0.0, 0)));
 
+    _buildWall(half, span);
+    _buildCloudFrontier(half, span);
     _scatterTrees();
     _updateBuildHighlights();
+  }
+
+  /// A low-poly stone wall ringing the plot, built from LIT PlaneGeometry faces
+  /// (no CuboidGeometry → no prismatic-edge fringe). Each side is a thin
+  /// double-sided vertical face + a horizontal top cap; lighting makes the cap
+  /// read brighter than the face. The grass (y=0) sits a wall-height below the
+  /// cap, so the developed area reads as sunken inside a retaining wall.
+  void _buildWall(double half, double span) {
+    const h = kCity3DWallHeight;
+    const cy = h / 2 - 0.1; // face center (dips slightly under the grass)
+    const top = h - 0.1; // wall top
+    final len = span + 0.6; // overlap the corners
+    Node face(PlaneGeometry g) =>
+        Node(mesh: Mesh(g, _mat(_texStone, rough: 0.9, doubleSided: true)));
+    Node cap(PlaneGeometry g) =>
+        Node(mesh: Mesh(g, _mat(_texStone, rough: 0.9)));
+
+    for (final z in [half, -half]) {
+      _addPlot(face(PlaneGeometry(width: len, depth: h))
+        ..localTransform =
+            (vm.Matrix4.translation(vm.Vector3(0, cy, z))..rotateX(pi / 2)));
+      _addPlot(cap(PlaneGeometry(width: len, depth: 0.7))
+        ..localTransform = vm.Matrix4.translation(vm.Vector3(0, top, z)));
+    }
+    for (final x in [half, -half]) {
+      _addPlot(face(PlaneGeometry(width: h, depth: len))
+        ..localTransform =
+            (vm.Matrix4.translation(vm.Vector3(x, cy, 0))..rotateZ(pi / 2)));
+      _addPlot(cap(PlaneGeometry(width: 0.7, depth: len))
+        ..localTransform = vm.Matrix4.translation(vm.Vector3(x, top, 0)));
+    }
+  }
+
+  /// The cloud frontier: instead of cloud blobs on the ground, a ring of soft
+  /// fluffy WHITE clouds just outside the wall that RISE well above it, hiding
+  /// everything beyond. Lit puffs (volume + soft shadow); stacked vertically
+  /// into a billowing bank. (The logical chunk world model is untouched — this
+  /// is visual-only.)
+  void _buildCloudFrontier(double half, double span) {
+    for (final n in _cloudNodes) {
+      scene.remove(n);
+    }
+    _cloudNodes.clear();
+    // Ring sits just OUTSIDE the wall so the wall stays visible in front and
+    // the clouds rise beyond it (inner edge ≈ wall outer face, no cream gap).
+    final outer = half + 5.5;
+    final n = (span / 8).ceil() + 1;
+    const layers = [(1.2, 5.0), (5.6, 4.5)];
+    void column(double x, double z) {
+      for (final (y, r) in layers) {
+        _cloud(Node(
+          mesh: Mesh(SphereGeometry(radius: r, segments: 12, rings: 7),
+              _mat(_texCloud, rough: 1.0)),
+        )..localTransform = (vm.Matrix4.translation(vm.Vector3(x, y, z))
+          ..scaleByDouble(1.0, 0.85, 1.0, 1)));
+      }
+    }
+
+    for (var i = 0; i <= n; i++) {
+      final t = -outer + (2 * outer) * (i / n); // -outer..+outer along a side
+      column(t, outer); // north edge
+      column(t, -outer); // south edge
+      column(outer, t); // east edge
+      column(-outer, t); // west edge
+    }
   }
 
   /// Scatters sparse low-poly trees at street intersections (boundary corners,
