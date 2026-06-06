@@ -93,7 +93,7 @@ class _CityScene3DState extends State<CityScene3D> {
   final Map<String, Node> _highlights = {}; // build-mode empty-cell markers
   int _treeGen = 0; // guards async tree scatter against stale rebuilds
   // Street-top textures (colour baked in). Loaded once in _init.
-  Object? _texGrass, _texAsphalt, _texSidewalk, _texSoil, _texCloud;
+  Object? _texGrass, _texSoil, _texCloud;
   final List<Node> _cloudNodes = []; // static hidden-chunk cloud cover
 
   // --- City reconciliation state ----------------------------------------
@@ -208,10 +208,8 @@ class _CityScene3DState extends State<CityScene3D> {
       ..radius = 0.85
       ..smoothness = 0.6;
 
-    // Load the street-top textures, then build the plot.
+    // Load the ground + cloud textures, then build the plot.
     _texGrass = await _models.texture(kCity3DTexGrass);
-    _texAsphalt = await _models.texture(kCity3DTexAsphalt);
-    _texSidewalk = await _models.texture(kCity3DTexSidewalk);
     _texSoil = await _models.texture(kCity3DTexSoil);
     _texCloud = await _models.texture(kCity3DTexCloud);
 
@@ -285,10 +283,11 @@ class _CityScene3DState extends State<CityScene3D> {
     _plotNodes.add(n);
   }
 
-  /// (Re)builds the plot as a street-organized city block: a layered island
-  /// base, one asphalt street layer, and a sidewalk + grass lot per cell (the
-  /// gaps between lots form the streets). Sized to [_plotSize], centered on the
-  /// grid origin. Buildings sit on the grass lots at y=0. Trees scatter after.
+  /// (Re)builds the plot as ONE natural, cohesive grass surface (no per-cell
+  /// lots / sidewalks / street grid — nothing that reads as a board). The grid
+  /// stays in logic only; buildings still snap to invisible cells. A soil apron
+  /// frames the plot. Sized to [_plotSize], centered on the grid origin. Trees
+  /// scatter after for life.
   void _buildPlot() {
     for (final n in _plotNodes) {
       scene.remove(n);
@@ -298,40 +297,18 @@ class _CityScene3DState extends State<CityScene3D> {
     final half = plotHalfExtentWorld(_plotSize);
     final span = half * 2;
 
-    // Flat lit soil ground (PlaneGeometry → has normals; replaces the
-    // no-normals cuboid whose hard silhouette fringed at grazing angles). A
-    // soil apron around the streets reads as the plot without raised sides.
+    // Soil apron framing the plot (lit PlaneGeometry, has normals).
     _addPlot(Node(
       mesh: Mesh(PlaneGeometry(width: span + 1.4, depth: span + 1.4),
           _mat(_texSoil, rough: 0.95)),
     )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.12, 0)));
 
-    // Three stacked surfaces — street < sidewalk < grass — spaced into real
-    // curb heights so they never z-fight at grazing angles. Asphalt is inset so
-    // a soil rim shows around the plot.
+    // One continuous grass surface — cohesive, no visible grid. Buildings sit
+    // on it at y=0, snapping to the (invisible) logical cells.
     _addPlot(Node(
-      mesh: Mesh(PlaneGeometry(width: span - 0.4, depth: span - 0.4),
-          _mat(_texAsphalt, rough: 0.85)),
-    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, -0.10, 0)));
-
-    final (lo, hi) = plotRange(_plotSize);
-    for (var gx = lo; gx <= hi; gx++) {
-      for (var gy = lo; gy <= hi; gy++) {
-        final w = cellToWorld(gx, gy, gridSize: widget.gridSize);
-        _addPlot(Node(
-          mesh: Mesh(
-              PlaneGeometry(
-                  width: kCity3DSidewalkSize, depth: kCity3DSidewalkSize),
-              _mat(_texSidewalk, rough: 0.9)),
-        )..localTransform =
-            vm.Matrix4.translation(vm.Vector3(w.x, -0.045, w.z)));
-        _addPlot(Node(
-          mesh: Mesh(
-              PlaneGeometry(width: kCity3DLotSize, depth: kCity3DLotSize),
-              _mat(_texGrass, rough: 0.9)),
-        )..localTransform = vm.Matrix4.translation(vm.Vector3(w.x, 0.0, w.z)));
-      }
-    }
+      mesh: Mesh(PlaneGeometry(width: span, depth: span),
+          _mat(_texGrass, rough: 0.95)),
+    )..localTransform = vm.Matrix4.translation(vm.Vector3(0, 0.0, 0)));
 
     _scatterTrees();
     _updateBuildHighlights();
@@ -361,8 +338,9 @@ class _CityScene3DState extends State<CityScene3D> {
     }
   }
 
-  /// In build mode, marks every empty plot cell with a bright tile so the
-  /// player sees where they can drop. Cleared otherwise.
+  /// In build/move mode, tints OCCUPIED (blocked) plot cells RED so the player
+  /// sees where they can't place. Valid cells get no marking. Cleared when not
+  /// in build/move mode, so the grid is invisible normally.
   void _updateBuildHighlights() {
     for (final n in _highlights.values) {
       scene.remove(n);
@@ -370,15 +348,15 @@ class _CityScene3DState extends State<CityScene3D> {
     _highlights.clear();
     if (!widget.buildMode) return;
     final (lo, hi) = plotRange(_plotSize);
-    const t = kCell3DSpacing * 0.9;
+    const t = kCell3DSpacing * 0.92;
     for (var gx = lo; gx <= hi; gx++) {
       for (var gy = lo; gy <= hi; gy++) {
-        if (_spec.containsKey(cellKey(gx, gy))) continue; // occupied
+        if (!_spec.containsKey(cellKey(gx, gy))) continue; // only occupied
         final w = cellToWorld(gx, gy, gridSize: widget.gridSize);
         final n = Node(
           mesh: Mesh(PlaneGeometry(width: t, depth: t),
-              _unlit(kCity3DHighlightColor)),
-        )..localTransform = vm.Matrix4.translation(vm.Vector3(w.x, 0.02, w.z));
+              _unlit(kCity3DBlockedColor)),
+        )..localTransform = vm.Matrix4.translation(vm.Vector3(w.x, 0.04, w.z));
         scene.add(n);
         _highlights[cellKey(gx, gy)] = n;
       }

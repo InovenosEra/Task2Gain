@@ -90,6 +90,10 @@ const List<double> kCity3DSoilColor = [0.42, 0.30, 0.19, 1.0];
 const List<double> kCity3DRimColor = [0.31, 0.22, 0.14, 1.0];
 const List<double> kCity3DHighlightColor = [0.62, 0.85, 0.38, 1.0];
 
+/// Build/move mode: occupied (blocked) cells are tinted RED so the player sees
+/// they can't place there. Valid cells get no marking.
+const List<double> kCity3DBlockedColor = [0.86, 0.20, 0.17, 1.0];
+
 /// Model mapping — building type id → GLB filename under [kCity3DModelDir].
 ///
 /// Uses the ITHappy MegaCity pack (embedded textures, auto-scaled/recentered by
