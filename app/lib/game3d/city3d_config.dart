@@ -66,10 +66,10 @@ const String kCity3DTexAsphalt = 'assets/city3d/textures/plot_asphalt.png';
 const String kCity3DTexSidewalk = 'assets/city3d/textures/plot_sidewalk.png';
 const String kCity3DTexSoil = 'assets/city3d/textures/plot_soil.png';
 
-/// Hidden-chunk fog texture — bright cool white. LIT (so puffs get volume +
-/// soft self-shadowing), but bright enough to read as fluffy white cloud that
-/// pops against the warm cream background, not grey rock and not pale mist.
-const String kCity3DTexCloud = 'assets/city3d/textures/plot_cloud.png';
+/// Cloud colour — bright soft white via UNLIT material, so puffs stay delicate
+/// and bright with NO grey shadowed undersides (lit clouds came out grey/heavy).
+/// Overlapping rising puffs read as a soft dreamy cloud bank.
+const List<double> kCity3DCloudColor = [0.97, 0.97, 0.99, 1.0];
 
 /// Lot/sidewalk widths within a cell ([kCell3DSpacing] = 2.4). The gap left by
 /// the sidewalk forms the street between blocks.

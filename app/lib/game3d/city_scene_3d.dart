@@ -92,7 +92,7 @@ class _CityScene3DState extends State<CityScene3D> {
   final Map<String, Node> _highlights = {}; // build-mode empty-cell markers
   int _treeGen = 0; // guards async tree scatter against stale rebuilds
   // Street-top textures (colour baked in). Loaded once in _init.
-  Object? _texGrass, _texSoil, _texCloud, _texStone;
+  Object? _texGrass, _texSoil, _texStone;
   final List<Node> _cloudNodes = []; // static hidden-chunk cloud cover
 
   // --- City reconciliation state ----------------------------------------
@@ -210,7 +210,6 @@ class _CityScene3DState extends State<CityScene3D> {
     // Load the ground + cloud textures, then build the plot.
     _texGrass = await _models.texture(kCity3DTexGrass);
     _texSoil = await _models.texture(kCity3DTexSoil);
-    _texCloud = await _models.texture(kCity3DTexCloud);
     _texStone = await _models.texture(kCity3DTexStone);
 
     // The revealed plot (grass + wall), the cloud frontier, trees, buildings.
@@ -329,7 +328,7 @@ class _CityScene3DState extends State<CityScene3D> {
       for (final (y, r) in layers) {
         _cloud(Node(
           mesh: Mesh(SphereGeometry(radius: r, segments: 12, rings: 7),
-              _mat(_texCloud, rough: 1.0)),
+              _unlit(kCity3DCloudColor)),
         )..localTransform = (vm.Matrix4.translation(vm.Vector3(x, y, z))
           ..scaleByDouble(1.0, 0.85, 1.0, 1)));
       }
